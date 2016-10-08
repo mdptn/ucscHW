@@ -66,21 +66,113 @@
     (printf ")~n"))
 
 
+;;HELPER FUNCTIONS--------------------------------------------------
+;; Helper functions to implement dim, let, goto, if, print, input
+;;------------------------------------------------------------------
+
+;; dim
+;; 
+
+
+
+
+
 ;;*function-table*--------------------------------------------------
-;;  holds all of the functions, which include the operators. 
+;; holds all of the functions, which include the operators. 
+;;
+;; dim, let, goto, if, print, input, + - * / % ^ = <> > < >= <=
+;; abs, acos, asin, atan, ceil, cos, exp, floor,
+;; log, log10, log2, round, sin, sqrt, tan, trunc
 ;;------------------------------------------------------------------
 
+;; makes the hash table for functions
+(define *function-table* (make-hash))
 
-;;*label-table*--------------------------------------------------
-;;  holds the addresses of each line, one level up from statements.
+;; get the value of the function pertaining to the key
+(define (function-get key)
+	(hash-ref *function-table* key))
+
+;; map the value of the function to the key
+(define (function-put! key value)
+	(hash-set! *function-table* key value))
+
+;; maps all function values to the function symbols
+(for-each
+	(lambda (pair)
+		(function-put! (car pair) (cadr pair)))
+	`(
+		(dim, help_dim)
+		(let, help_let)
+		(goto, help_goto)
+		(if, help_if)
+		(print, help_print)
+		(input, help_input)
+		(+, +)
+		(-, -)
+		(*, *)
+		(/, /)
+		(%, (lambda (x y) (- x (* (trunc (/ x y)) y))))
+		(^, expt)
+		(=, =)
+		(<>, (lambda (x y) (not(= x y)))
+		(>, >)
+		(<, <)
+		(>=, >=)
+		(<=, <=)
+		(abs, abs)
+		(acos, acos)
+		(asin, asin)
+		(atan, atan)
+		(ceil, ceil)
+		(cos, cos)
+		(exp, exp)
+		(floor, floor)
+		(log, log)
+		(log10, log10)
+		(log2, log2)
+		(round, round)
+		(sin, sin)
+		(sqrt, sqrt)
+		(tan, tan)
+		(trunc, trunc)
+		))
+
+
+
+
+;;*label-table*-----------------------------------------------------
+;; holds the addresses of each line, one level up from statements.
 ;;------------------------------------------------------------------
+
+(define *label-table* (make-hash))
 
 
 ;;*variable-table*--------------------------------------------------
-;;  holds the value of all variables.
+;; holds the value of all variables.
 ;;------------------------------------------------------------------
 
+;; makes the hash table for variables
+(define *variable-table* (make-hash))
 
+;; get the value of the variable pertaining to the key
+(define (variable-get key)
+	(hash-ref *variable-table* key))
+
+;; map the value of the variable to the key
+(define (variable-put! key value)
+	(hash-set! *variable-table* key value))
+
+;; inserts values for the variables pi and e as stated in asg
+(for-each
+	(lambda (pair)
+		(variable-put! (car pair) (cadr pair)))
+	`(
+		(pi 3.141592653589793238462643383279502884197169399)
+		(e 2.718281828459045235360287471352662497757247093)
+		))
+
+
+;;MAIN--------------------------------------------------------------
 
 (define (main arglist)
     (if (or (null? arglist) (not (null? (cdr arglist))))
