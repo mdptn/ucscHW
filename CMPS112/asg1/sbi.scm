@@ -153,15 +153,17 @@
 
 ;; goes through the program to find labels and add them to hash
 ;; for each line, if the line doesn't just contain the line number,
-;; AND if the next element isn't a list, then that element is a label
+;; AND if the next element is a symbol, then that element is a label
 ;; and it is put into the label table as the key, while the rest of the
 ;; program starting from the label is stored as the value.
 (define (put-in-label-table program)
 	(for-each (lambda (line)
-		(when (and (not (null? (cdr line))) (not (pair? (cadr line))))
+		(when (and (not (null? (cdr line))) (symbol? (cadr line)))
 			(hash-set! *label-table* (cadr line) (member line program)))
 		) program))
 
+
+;; taken from listhash.scm to test if label table inserted correctly
 (define (show label item)
         (newline)
         (display label) (display ":") (newline)
@@ -202,12 +204,20 @@
         (usage-exit)
         (let* ((sbprogfile (car arglist))
                (program (readlist-from-inputfile sbprogfile)))
+
+            ;; puts the program labels into the label hash table
             (put-in-label-table program)
+
+            ;; testing: printing out the label table
             (hash-for-each *label-table*
                 (lambda (key value) (show key value)))
+
+            ;; execute the program statements
+            ;;(execute-program program)
+
               ;;(write-program-by-line sbprogfile program)
               )))
 
-(main (vector->list (crrent-commuand-line-arguments)))
+(main (vector->list (current-command-line-arguments)))
 
 
