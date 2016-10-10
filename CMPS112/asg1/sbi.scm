@@ -70,8 +70,17 @@
 ;; Helper functions to implement dim, let, goto, if, print, input
 ;;------------------------------------------------------------------
 
-;; dim
-;; 
+(define (help-dim x))
+
+(define (help-let x))
+
+(define (help-goto x))
+
+(define (help-if x))
+
+(define (help-print x))
+
+(define (help-input x))
 
 
 
@@ -104,12 +113,12 @@
 	(lambda (pair)
 		(function-put! (car pair) (cadr pair)))
 	`(
-		;;(dim, help_dim)
-		;;(let, help_let)
-		;;(goto, help_goto)
-		;;(if, help_if)
-		;;(print, help_print)
-		;;(input, help_input)
+		(dim, help_dim)
+		(let, help_let)
+		(goto, help_goto)
+		(if, help_if)
+		(print, help_print)
+		(input, help_input)
 		(+, +)
 		(-, -)
 		(*, *)
