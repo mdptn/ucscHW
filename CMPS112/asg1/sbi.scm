@@ -79,6 +79,9 @@
 
 ;;*function-table*--------------------------------------------------
 ;; holds all of the functions, which include the operators. 
+;; the key is the function symbol, value is the implementation
+;; most implementations are built into scheme,
+;; excluding the 6 that need helper functions and % & <>
 ;;
 ;; dim, let, goto, if, print, input, + - * / % ^ = <> > < >= <=
 ;; abs, acos, asin, atan, ceil, cos, exp, floor,
@@ -142,13 +145,28 @@
 
 ;;*label-table*-----------------------------------------------------
 ;; holds the addresses of each line, one level up from statements.
+;; the key is the label, value is the statement
 ;;------------------------------------------------------------------
 
+;; makes the hash table for labels
 (define *label-table* (make-hash))
+
+;; goes through the program to find labels and add them to hash
+;; for each line, if the line doesn't just contain the line number,
+;; AND if the next element isn't a list, then that element is a label
+;; and it is put into the label table as the key, while the rest of the
+;; program starting from the label is stored as the value.
+(define (put-in-label-table program)
+	(for-each (lambda (line)
+		(when (and (not (null? (cdr line))) (not (list? (cadr line))))
+			(hash-set! *label-table* (cadr line) (member line program)))
+		) program))
+	
 
 
 ;;*variable-table*--------------------------------------------------
 ;; holds the value of all variables.
+;; the key is variable name, value is real #s or vectors of real #s
 ;;------------------------------------------------------------------
 
 ;; makes the hash table for variables
@@ -179,6 +197,7 @@
         (usage-exit)
         (let* ((sbprogfile (car arglist))
                (program (readlist-from-inputfile sbprogfile)))
+            (put-in-label-table program)
               (write-program-by-line sbprogfile program))))
 
 (main (vector->list (current-command-line-arguments)))
