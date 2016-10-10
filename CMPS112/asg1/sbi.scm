@@ -104,12 +104,12 @@
 	(lambda (pair)
 		(function-put! (car pair) (cadr pair)))
 	`(
-		(dim, help_dim)
-		(let, help_let)
-		(goto, help_goto)
-		(if, help_if)
-		(print, help_print)
-		(input, help_input)
+		;;(dim, help_dim)
+		;;(let, help_let)
+		;;(goto, help_goto)
+		;;(if, help_if)
+		;;(print, help_print)
+		;;(input, help_input)
 		(+, +)
 		(-, -)
 		(*, *)
@@ -117,7 +117,7 @@
 		(%, (lambda (x y) (- x (* (trunc (/ x y)) y))))
 		(^, expt)
 		(=, =)
-		(<>, (lambda (x y) (not(= x y)))
+		(<>, (lambda (x y) (not(= x y))))
 		(>, >)
 		(<, <)
 		(>=, >=)
@@ -126,18 +126,18 @@
 		(acos, acos)
 		(asin, asin)
 		(atan, atan)
-		(ceil, ceil)
+		(ceil, ceiling)
 		(cos, cos)
 		(exp, exp)
 		(floor, floor)
 		(log, log)
-		(log10, log10)
-		(log2, log2)
+		(log10, (lambda (x) (/ (log x) (log 10.0))))
+		(log2, (lambda (x) (/ (log x) (log 2.0))))
 		(round, round)
 		(sin, sin)
 		(sqrt, sqrt)
 		(tan, tan)
-		(trunc, trunc)
+		(trunc, truncate)
 		))
 
 
@@ -158,9 +158,14 @@
 ;; program starting from the label is stored as the value.
 (define (put-in-label-table program)
 	(for-each (lambda (line)
-		(when (and (not (null? (cdr line))) (not (list? (cadr line))))
+		(when (and (not (null? (cdr line))) (not (pair? (cadr line))))
 			(hash-set! *label-table* (cadr line) (member line program)))
 		) program))
+
+(define (show label item)
+        (newline)
+        (display label) (display ":") (newline)
+        (display item) (newline))
 	
 
 
@@ -198,8 +203,11 @@
         (let* ((sbprogfile (car arglist))
                (program (readlist-from-inputfile sbprogfile)))
             (put-in-label-table program)
-              (write-program-by-line sbprogfile program))))
+            (hash-for-each *label-table*
+                (lambda (key value) (show key value)))
+              ;;(write-program-by-line sbprogfile program)
+              )))
 
-(main (vector->list (current-command-line-arguments)))
+(main (vector->list (crrent-commuand-line-arguments)))
 
 
