@@ -70,19 +70,44 @@
 ;; Helper functions to implement dim, let, goto, if, print, input
 ;;------------------------------------------------------------------
 
-(define (help-dim x))
+;; creates an array given by the variable name and inserts it into the
+;; variable table, replacing any previous variable, array, or function
+;; already in the table. The dimension of the array is given by the expression.
+(define (help-dim expr)
+	(set! expr (car expr))
+	(let ((arr (make-vector (eval (cadr expr)) (car expr))))
+		(variable-put! (car expr) (+ (eval (cadr expr)) 1))))
 
-(define (help-let x))
+;; makes an assignment to a variable.
+;; the variable name and the evaluated expression is put into the variable table.
+(define (help-let expr)
+	(variable-put! (car expr) (eval (cadr expr))))
 
 (define (help-goto x))
 
 (define (help-if x))
 
-(define (help-print x))
+;; Each of the operands is printed in sequence, with a space before
+;; Expression values. A newline is output at the end of the print statement.
+(define (help-print expr)
+	(map (lambda (x) (display (eval x))) expr)
+	(newline))
 
-(define (help-input x))
+;; Numeric values are read in and assigned to the input variables in sequence.
+;; the value is inserted into the Symbol table under that variable’s key.
+;; The variable inputcount is inserted into the symbol table at end of execution
+;; of this statement and initialized to the number of values successfully read in.
+;; A value of −1 is returned to indicate end of file.
+(define (help-input expr)
+	(variable-put! 'inputcount 0)
+	(if (null? (car expr))
+		(variable-put! 'inputcount -1) (begin (variable-put! 'inputcount (help-input-count expr 0)))))
 
-
+;; this function helps manage the inputcount variable for the input function
+(define (help-input-count expr count)
+	(if (null? expr) count (let ((input (read))) (if (eof-object? input) -1
+		(begin (variable-put! (car expr) input)
+			(set! count (+ 1 count)) (help-input-count (cdr expr) count))))))
 
 
 
@@ -166,7 +191,7 @@
 ;; and it is put into the label table as the key, while the rest of the
 ;; program starting from the label is stored as the value.
 (define (put-in-label-table program)
-	(for-each (lambda (line)
+	(map (lambda (line)
 		(when (and (not (null? (cdr line))) (symbol? (cadr line)))
 			(hash-set! *label-table* (cadr line) (member line program)))
 		) program))
@@ -206,6 +231,19 @@
 		))
 
 
+;;FUNCTIONS FOR EVALUATING THE STATEMENTS---------------------------
+
+;; find the # of items in the list
+(define numberOfItems
+	(lambda (list)
+		(if (null? list) 0
+			(+ (numberOfItems (cdr list)) 1))))
+
+;; starts parsing through the file to evaluate statements
+(define (run-through program lineNumber)
+	(when (> (numberOfItems program) lineNumber)
+		))
+
 ;;MAIN--------------------------------------------------------------
 
 (define (main arglist)
@@ -221,8 +259,8 @@
             (hash-for-each *label-table*
                 (lambda (key value) (show key value)))
 
-            ;; execute the program statements
-            ;;(execute-program program)
+            ;; execute the file statements starting with first item(line)
+            (run-through program 0)
 
               ;;(write-program-by-line sbprogfile program)
               )))
