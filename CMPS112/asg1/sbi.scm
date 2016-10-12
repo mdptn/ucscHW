@@ -182,15 +182,17 @@
 (define *label-table* (make-hash))
 
 ;; goes through the program to find labels and add them to hash
-;; for each line, if the line doesn't just contain the line number,
-;; AND if the next element is a symbol, then that element is a label
-;; and it is put into the label table as the key, while the rest of the
-;; program starting from the label is stored as the value.
+;; if the line has 3 items then it has a label.
+;; OR if a line has two items and the 2nd is not a list, it is a label.
+;; the label is put into the label table as the key, while address
+;; starting from the label is stored as the value.
 (define (put-in-label-table program)
 	(map (lambda (line)
-		(when (and (not (null? (cdr line))) (symbol? (cadr line)))
-			(hash-set! *label-table* (cadr line) (member line program)))
-		) program))
+		(when (not (null? line))
+			(when (or (= 3 (numberOfItems line)) 
+			      (and (= 2 (numberOfItems line)) 
+                              (not (list? (cadr line)))))
+			(hash-set! *label-table* (cadr line) (- (car line) 1))))) program))
 
 
 ;; taken from listhash.scm to test if label table inserted correctly
@@ -270,20 +272,23 @@
 	)
 
 ;; evaluates expressions
+;; if the expr is a number, add 0.0 to make it a real number
+;; checks in the variable table if the expr is in there
+;; checks in function table to find function and goto evalexpr
 (define (evalexpr expr)
-	(cond ((number? expr) expr)
+	(cond ((number? expr) (+ expr 0.0))
 		((string? expr) expr)
 		((hash-has-key? *variable-table* expr)
 			(hash-ref *variable-table* expr))
 		((list? expr)
-			(if (hash-has-key? *variable-table* (car expr))
-				(let ((head (hash-ref *variable-table* (car expr))))
+			(if (hash-has-key? *function-table* (car expr))
+				(let ((head (hash-ref *function-table* (car expr))))
 					(cond ((number? head) head)
 						((vector? head) (vector-ref head (cadr expr)))
 						((procedure? head)
 							(apply head (map (lambda (x) (evalexpr x)) (cdr expr))))
 						(else (die "Error with evaluating the expression"))))
-				(die (list (car expr) " expression not found in the variable table"))))))
+				(die (list (car expr) " expression not found in the function table"))))))
 
 
 
