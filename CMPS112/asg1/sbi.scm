@@ -73,24 +73,20 @@
 ;; creates an array given by the variable name and inserts it into the
 ;; variable table, replacing any previous variable, array, or function
 ;; already in the table. The dimension of the array is given by the expression.
-(define (help-dim expr)
+(define (help_dim expr)
 	(set! expr (car expr))
-	(let ((arr (make-vector (eval (cadr expr)) (car expr))))
-		(variable-put! (car expr) (+ (eval (cadr expr)) 1))))
+	(let ((arr (make-vector (evalexpr (cadr expr)) (car expr))))
+		(variable-put! (car expr) (+ (evalexpr (cadr expr)) 1))))
 
 ;; makes an assignment to a variable.
 ;; the variable name and the evaluated expression is put into the variable table.
-(define (help-let expr)
-	(variable-put! (car expr) (eval (cadr expr))))
-
-(define (help-goto x))
-
-(define (help-if x))
+(define (help_let expr)
+	(variable-put! (car expr) (evalexpr (cadr expr))))
 
 ;; Each of the operands is printed in sequence, with a space before
 ;; Expression values. A newline is output at the end of the print statement.
-(define (help-print expr)
-	(map (lambda (x) (display (eval x))) expr)
+(define (help_print expr)
+	(map (lambda (x) (display (evalexpr x))) expr)
 	(newline))
 
 ;; Numeric values are read in and assigned to the input variables in sequence.
@@ -98,16 +94,16 @@
 ;; The variable inputcount is inserted into the symbol table at end of execution
 ;; of this statement and initialized to the number of values successfully read in.
 ;; A value of −1 is returned to indicate end of file.
-(define (help-input expr)
+(define (help_input expr)
 	(variable-put! 'inputcount 0)
 	(if (null? (car expr))
-		(variable-put! 'inputcount -1) (begin (variable-put! 'inputcount (help-input-count expr 0)))))
+		(variable-put! 'inputcount -1) (begin (variable-put! 'inputcount (help_input_count expr 0)))))
 
 ;; this function helps manage the inputcount variable for the input function
-(define (help-input-count expr count)
+(define (help_input_count expr count)
 	(if (null? expr) count (let ((input (read))) (if (eof-object? input) -1
 		(begin (variable-put! (car expr) input)
-			(set! count (+ 1 count)) (help-input-count (cdr expr) count))))))
+			(set! count (+ 1 count)) (help_input_count (cdr expr) count))))))
 
 
 
@@ -140,8 +136,8 @@
 	`(
 		(dim, help_dim)
 		(let, help_let)
-		(goto, help_goto)
-		(if, help_if)
+		(goto (void))
+		(if (void))
 		(print, help_print)
 		(input, help_input)
 		(+, +)
@@ -235,14 +231,61 @@
 
 ;; find the # of items in the list
 (define numberOfItems
-	(lambda (list)
-		(if (null? list) 0
-			(+ (numberOfItems (cdr list)) 1))))
+	(lambda (x)
+		(if (null? x) 0
+			(+ (numberOfItems (cdr x)) 1))))
 
-;; starts parsing through the file to evaluate statements
+;; starts running through the sbir file to find statements to evaluate
 (define (run-through program lineNumber)
+	;; do this while line number < the # of lines in the sbir file
 	(when (> (numberOfItems program) lineNumber)
-		))
+		;; list-ref returns the line in the program at that lineNumber
+		(let ((line (list-ref program lineNumber)))
+			(cond ((= (numberOfItems line) 3)
+				(set! line (cddr line)) (run-through-line (car line) program lineNumber))
+			((and (= (numberOfItems line) 2) (list? (cadr line)))
+				(set! line (cdr line)) (run-through-line (car line) program lineNumber))
+			(else (run-through program (+ lineNumber 1)))))))
+
+;; checks the function table to see if there is an appropriate function in the line.
+;; displays error message and exits if it isn't a valid function symbol
+;; parses through to see if the function is goto, if, or print 
+;; performs what is needed if it is those three, else checks the function table
+;; for what to do for other functions
+(define (run-through-line funct program lineNumber)
+	(when (not (hash-has-key? *function-table* (car funct)))
+		(die "~s not a valid function in the table" (car funct)))
+	(cond ((eq? (car funct) 'goto)
+		(run-through program (hash-ref *label-table* (cadr funct))))
+	((eq? (car funct) 'if)
+		(if (evalexpr (car (cdr funct)))
+			(run-through program (hash-ref *label-table* (cadr (cdr funct))))
+			(run-through program (+ lineNumber 1))))
+	((eq? (car funct) 'print)
+		(if (null? (cdr funct))
+			(newline) (help_print (cdr funct)))
+		(run-through program (+ lineNumber 1)))
+	(else ((hash-ref *function-table* (car funct)) (cdr funct))
+		(run-through program (+ lineNumber 1))))
+	)
+
+;; evaluates expressions
+(define (evalexpr expr)
+	(cond ((number? expr) expr)
+		((string? expr) expr)
+		((hash-has-key? *variable-table* expr)
+			(hash-ref *variable-table* expr))
+		((list? expr)
+			(if (hash-has-key? *variable-table* (car expr))
+				(let ((head (hash-ref *variable-table* (car expr))))
+					(cond ((number? head) head)
+						((vector? head) (vector-ref head (cadr expr)))
+						((procedure? head)
+							(apply head (map (lambda (x) (evalexpr x)) (cdr expr))))
+						(else (die "Error with evaluating the expression"))))
+				(die (list (car expr) " expression not found in the variable table"))))))
+
+
 
 ;;MAIN--------------------------------------------------------------
 
@@ -256,8 +299,8 @@
             (put-in-label-table program)
 
             ;; testing: printing out the label table
-            (hash-for-each *label-table*
-                (lambda (key value) (show key value)))
+            ;;(hash-for-each *label-table*
+                ;;(lambda (key value) (show key value)))
 
             ;; execute the file statements starting with first item(line)
             (run-through program 0)
