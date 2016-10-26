@@ -55,6 +55,25 @@ module Bigint = struct
                        ((if sign = Pos then "" else "-") ::
                         (map string_of_int reversed))
 
+
+    (* deletes leading 0 digits 
+       referenced from trimzeros.ml example*)
+    let trimzero list =
+        let rec trimzero' list' = match list' with
+            | []       -> []
+            | [0]      -> []
+            | car::cdr ->
+                let cdr' = trimzero' cdr
+            in match car, cdr' with
+                | 0, []     -> []
+                | car, cdr' -> car::cdr'
+        in trimzero' list
+
+
+    (* returns a comparison value in the same way as strcmp in C *)
+    blah
+
+
     let rec add' list1 list2 carry = match (list1, list2, carry) with
         | list1, [], 0       -> list1
         | [], list2, 0       -> list2

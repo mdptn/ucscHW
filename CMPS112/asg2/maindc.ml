@@ -23,6 +23,7 @@ let pop = Stack.pop
 let ord thechar = int_of_char thechar
 type binop_t = bigint -> bigint -> bigint
 
+
 (* prints the number list.
    since dc prints the '\' character if a number exceeds 70 characters,
    this recursive function prints accordingly. *)
@@ -31,19 +32,23 @@ let rec print_number number =
     (* if the number is less than 70 chars, print it on one line *)
     if (String.length n) < 70
     then (printf "%s\n%!" n)
-    (* if the number is greater than, print a \ at the end of the line and
-       recursively print the rest of the number *)
+    (* if the number is greater than or equal, print a \ at the end of the line
+       and recursively print the rest of the number *)
     else (printf "%s\\\n%!" (String.sub n 0 69);
           print_number (bigint_of_string (String.sub n 69 ((String.length n) - 69))))
 
+
 let print_stackempty () = printf "stack empty\n%!"
 
+
+(* edit this to implement l and s*)
 let executereg (thestack: stack_t) (oper: char) (reg: int) =
     try match oper with
         | 'l' -> printf "operator l reg 0%o is unimplemented\n%!" reg
         | 's' -> printf "operator s reg 0%o is unimplemented\n%!" reg
         | _   -> printf "0%o 0%o is unimplemented\n%!" (ord oper) reg
     with Stack.Empty -> print_stackempty()
+
 
 let executebinop (thestack: stack_t) (oper: binop_t) =
     try let right = pop thestack
@@ -53,6 +58,7 @@ let executebinop (thestack: stack_t) (oper: binop_t) =
                                  push right thestack)
     with Stack.Empty -> print_stackempty ()
 
+(* calls other helper functions in bigint.ml to execute these operands *)
 let execute (thestack: stack_t) (oper: char) =
     try match oper with
         | '+'  -> executebinop thestack Bigint.add
