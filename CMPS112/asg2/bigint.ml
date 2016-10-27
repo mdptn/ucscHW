@@ -164,8 +164,42 @@ module Bigint = struct
         else zero
       
 
+    (* doublex2 function
+       doubles a number x2
+       used muldivrem-trace.ml as reference *)
+    let doublex2 num = num + num
 
-    let mul = add
+
+    (* mul' function
+       multiplication helper
+       used muldivrem-trace.ml as reference *)
+    let rec mul' (multiplier, power2, multiplicand') =
+        if (cmp power2 multipler) > 0
+        then multiplier, [0]
+        else let remainder, product =
+                mul' (multiplier, doublex2 power2, doublex2 multiplicand')
+            in if remainder < power2
+                then remainder, product
+              else remainder - power2, product + multiplicand'
+
+
+    (* mul2 function
+       calls the mul' helper function
+       used muldivrem-trace.ml as reference *)
+    let mul2 (multiplier, multiplicand) =
+        let _, product = mul' (multiplier, [1], multiplicand)
+        in product
+
+
+    (* mul function
+       compares signs of the two numbers and then calls mul2 to help
+       if both numbers are the same sign, the answer will be pos. else neg *)
+    let mul = (Bigint (neg1, multiplier)) (Bigint (neg2, multiplicand)) =
+        (* check if both signs are equal *)
+        if neg1 = neg2
+        then Bigint (Pos, mul2 (multiplier, multiplicand))
+        else Bigint (Neg, mul2 (multiplier, multiplicand))
+
 
     let div = add
 
