@@ -62,9 +62,9 @@ module Bigint = struct
        returns = 0 if length and values list1 = list2
        returns > 0 if length list1 > list2 *)
     let cmp list1 list2 = 
-        if (strlen list1) < (strlen list2)
+        if (List.length list1) < (List.length list2)
         then -1
-        else if (strlen list1) > (strlen list2)
+        else if (List.length list1) > (List.length list2)
         then 1
         (* if not < or >, then length is equal. compare each value *)
         else (let reverse1 = reverse list1 in
