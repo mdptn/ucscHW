@@ -56,8 +56,29 @@ module Bigint = struct
                         (map string_of_int reversed))
 
 
-    (* deletes leading 0 digits 
-       referenced from trimzeros.ml example*)
+    (* cmp function
+       returns a comparison value in the same way as strcmp in C
+       returns < 0 if length list1 < list2
+       returns = 0 if length and values list1 = list2
+       returns > 0 if length list1 > list2 *)
+    let cmp list1 list2 = 
+        if (strlen list1) < (strlen list2)
+        then -1
+        else if (strlen list1) > (strlen list2)
+        then 1
+        (* if not < or >, then length is equal. compare each value *)
+        else (let reverse1 = reverse list1 in
+              let reverse2 = reverse list2 in
+              if reverse1 > reverse2
+              then 1
+              else if reverse2 > reverse1
+              then -1
+              else 0)
+
+
+    (* trimzero function
+       deletes leading 0 digits , helps with absolute subtraction
+       referenced from trimzeros.ml example *)
     let trimzero list =
         let rec trimzero' list' = match list' with
             | []       -> []
@@ -70,10 +91,8 @@ module Bigint = struct
         in trimzero' list
 
 
-    (* returns a comparison value in the same way as strcmp in C *)
-    blah
-
-
+    (* add' function
+       helper function, carries out addition *)
     let rec add' list1 list2 carry = match (list1, list2, carry) with
         | list1, [], 0       -> list1
         | [], list2, 0       -> list2
@@ -83,12 +102,68 @@ module Bigint = struct
           let sum = car1 + car2 + carry
           in  sum mod radix :: add' cdr1 cdr2 (sum / radix)
 
+
+    (* sub' function
+       helper function, carries out subtraction *)
+    let rec sub' list1 list2 carry = match (list1, list2, carry) with
+        | list1, [], 0       -> list1
+        | [], list2, 0       -> list2
+        | list1, [], carry   -> trimzero (sub' list1 [carry] 0)
+        | [], list2, carry   -> trimzero (sub' [carry] list2 0)
+        | car1::cdr1, car2::cdr2, carry ->
+          (* if list1 digit is < list2 digit, carry over*)
+          if (car1 - carry) < car2
+          then let diff = (10 + car1) - (car2 + carry)
+               in diff mod radix :: trimzero (sub' cdr1 cdr2 1)
+          (* else just subtract as normal *)
+          else let diff = car1 - car2 - carry
+               in diff mod radix :: trimzero (sub' cdr1 cdr2 0)
+
+
+    (* add function
+       compares signs of both values and then uses add' or sub' helper function *)
     let add (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        (* if both signs are equal, use the add' helper function *)
         if neg1 = neg2
         then Bigint (neg1, add' value1 value2 0)
+        (* if they aren't equal, then one is neg and one is pos.
+           find out if the first number is negative,
+           then compare its absolute value with the second number.
+           subtract whichever number is smaller using sub'. *)
+        else if neg1 = Neg
+        then (if (cmp value1 value2) > 0
+              then Bigint (Neg, trimzero (sub' value1 value2 0))
+              else Bigint (Pos, trimzero (sub' value2 value1 0)))
+        (* find out if the first number is positive*)
+        else if neg1 = Pos
+        then (if (cmp value1 value2) >= 0
+              then Bigint (Pos, trimzero (sub' value1 value2 0))
+              else Bigint (Neg, trimzero (sub' value2 value1 0)))
         else zero
 
-    let sub = add
+
+    (* sub function
+       compares signs of both values and then uses add' or sub' helper function
+       almost identical to add function, but handles signs differently *)
+    let sub (Bigint (neg1, value1)) (Bigint (neg2, value2)) =
+        (* if both signs are equal, compare values and use the sub' helper function *)
+        if neg1 = neg2
+        then (if (cmp value1 value2) > 0
+              then Bigint (neg1, trimzero (sub' value1 value2 0))
+              else if (cmp value1 value2) < 0
+              then Bigint (neg1, trimzero (sub' value2 value1 0))
+              else zero)
+        (* find out if the first number is negative
+           if so, add the values and yield a negative number *)
+        else if neg1 = Neg
+        then Bigint (Neg, add' value1 value2 0)
+        (* find out if the first number is positive
+           if so, add the values and yield a positive number *)
+        else if neg1 = Pos
+        then Bigint (Pos, add' value1 value2 0)
+        else zero
+      
+
 
     let mul = add
 
