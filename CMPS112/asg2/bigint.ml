@@ -160,13 +160,13 @@ module Bigint = struct
     (* doublex2 function
        doubles a number x2
        used muldivrem-trace.ml as reference *)
-    let doublex2 num = num + num
+    let doublex2 num = add' num num 0
 
     (* mul' function
        multiplication helper
        used muldivrem-trace.ml as reference *)
     let rec mul' (multiplier, power2, multiplicand') =
-        if (cmp power2 multipler) > 0
+        if (cmp power2 multiplier) > 0
         then multiplier, [0]
         else let remainder, product =
                 mul' (multiplier, doublex2 power2, doublex2 multiplicand')
@@ -184,7 +184,7 @@ module Bigint = struct
     (* mul function
        compares signs of the two numbers and then calls mul2 to help
        if both numbers are the same sign, the answer will be pos. else neg *)
-    let mul = (Bigint (neg1, multiplier)) (Bigint (neg2, multiplicand)) =
+    let mul (Bigint (neg1, multiplier)) (Bigint (neg2, multiplicand)) =
         (* check if both signs are equal *)
         if neg1 = neg2
         then Bigint (Pos, mul2 (multiplier, multiplicand))
@@ -197,7 +197,7 @@ module Bigint = struct
         if (cmp divisor' dividend) > 0
         then [0], dividend
         else let quot, remainder =
-                divrem' (dividend, double power2, double divisor')
+                divrem' (dividend, doublex2 power2, doublex2 divisor')
             in if (cmp divisor' remainder) > 0
                 then quot, remainder
                 else add' quot power2 0, trimzero (sub' remainder divisor' 0)
@@ -211,14 +211,14 @@ module Bigint = struct
        calls the divrem' helper function
        used muldivrem-trace.ml as reference *)
     let div2 (dividend, divisor) =
-        let _, quot = divrem' (dividend, divisor)
+        let quot, _ = divrem (dividend, divisor)
         in quot
 
     (* div function
        compares signs of the two numbers and then calls div2 to help
        if both numbers are the same sign, the answer will be pos. else neg
        nearly identical to mul except that it calls div2 instead of mul2 *)
-    let div = (Bigint (neg1, dividend)) (Bigint (neg2, divisor)) =
+    let div (Bigint (neg1, dividend)) (Bigint (neg2, divisor)) =
         (* check if both signs are equal *)
         if neg1 = neg2
         then Bigint (Pos, div2 (dividend, divisor))
@@ -234,13 +234,30 @@ module Bigint = struct
     (* rem function 
        finds the modulo of the two values
        similar to mul and div, compares the signs and then calls rem2 *)
-    let rem = (Bigint (neg1, dividend)) (Bigint (neg2, divisor)) =
+    let rem (Bigint (neg1, dividend)) (Bigint (neg2, divisor)) =
         (* check if both signs are equal *)
         if neg1 = neg2
         then Bigint (Pos, rem2 (dividend, divisor))
         else Bigint (Neg, rem2 (dividend, divisor))
 
-    let pow = add
+    (* pow' function
+       carries out exponents
+       used muldivrem-trace.ml as reference *)
+    let rec pow' (base, expt, result) =
+        if cmp expt [0] = 0
+        then result
+        else pow' (base, sub' expt [1] 0, mul2 (base, result))
+
+    (* pow function 
+       determines the sign of the result and calls pow' to carry out.
+       if exponent is neg, return 0 since dc is only integers *)
+    let pow (Bigint (neg1, base)) (Bigint (neg2, expt)) =
+        if neg2 = Neg 
+        then zero
+        else if neg1 = Pos
+        then Bigint (Pos, pow'(base, expt, [1]))
+        else Bigint (Neg, pow'(base, expt, [1]))
+
 
 end
 
