@@ -55,7 +55,6 @@ module Bigint = struct
                        ((if sign = Pos then "" else "-") ::
                         (map string_of_int reversed))
 
-
     (* cmp function
        returns a comparison value in the same way as strcmp in C
        returns < 0 if length list1 < list2
@@ -75,7 +74,6 @@ module Bigint = struct
               then -1
               else 0)
 
-
     (* trimzero function
        deletes leading 0 digits , helps with absolute subtraction
        referenced from trimzeros.ml example *)
@@ -90,7 +88,6 @@ module Bigint = struct
                 | car, cdr' -> car::cdr'
         in trimzero' list
 
-
     (* add' function
        helper function, carries out addition *)
     let rec add' list1 list2 carry = match (list1, list2, carry) with
@@ -101,7 +98,6 @@ module Bigint = struct
         | car1::cdr1, car2::cdr2, carry ->
           let sum = car1 + car2 + carry
           in  sum mod radix :: add' cdr1 cdr2 (sum / radix)
-
 
     (* sub' function
        helper function, carries out subtraction *)
@@ -118,7 +114,6 @@ module Bigint = struct
           (* else just subtract as normal *)
           else let diff = car1 - car2 - carry
                in diff mod radix :: trimzero (sub' cdr1 cdr2 0)
-
 
     (* add function
        compares signs of both values and then uses add' or sub' helper function *)
@@ -141,7 +136,6 @@ module Bigint = struct
               else Bigint (Neg, trimzero (sub' value2 value1 0)))
         else zero
 
-
     (* sub function
        compares signs of both values and then uses add' or sub' helper function
        almost identical to add function, but handles signs differently *)
@@ -162,13 +156,11 @@ module Bigint = struct
         else if neg1 = Pos
         then Bigint (Pos, add' value1 value2 0)
         else zero
-      
 
     (* doublex2 function
        doubles a number x2
        used muldivrem-trace.ml as reference *)
     let doublex2 num = num + num
-
 
     (* mul' function
        multiplication helper
@@ -178,10 +170,9 @@ module Bigint = struct
         then multiplier, [0]
         else let remainder, product =
                 mul' (multiplier, doublex2 power2, doublex2 multiplicand')
-            in if remainder < power2
+            in if (cmp power2 remainder) > 0
                 then remainder, product
-              else remainder - power2, product + multiplicand'
-
+              else trimzero (sub' remainder power2 0), add' product multiplicand' 0
 
     (* mul2 function
        calls the mul' helper function
@@ -189,7 +180,6 @@ module Bigint = struct
     let mul2 (multiplier, multiplicand) =
         let _, product = mul' (multiplier, [1], multiplicand)
         in product
-
 
     (* mul function
        compares signs of the two numbers and then calls mul2 to help
@@ -200,10 +190,55 @@ module Bigint = struct
         then Bigint (Pos, mul2 (multiplier, multiplicand))
         else Bigint (Neg, mul2 (multiplier, multiplicand))
 
+    (* divrem' function 
+       carries out the actual division
+       used muldivrem-trace.ml as reference *)
+    let rec divrem' (dividend, power2, divisor') = 
+        if (cmp divisor' dividend) > 0
+        then [0], dividend
+        else let quot, remainder =
+                divrem' (dividend, double power2, double divisor')
+            in if (cmp divisor' remainder) > 0
+                then quot, remainder
+                else add' quot power2 0, trimzero (sub' remainder divisor' 0)
 
-    let div = add
+    (* divrem function
+       makes a call to divrem'
+       used muldivrem-trace.ml as reference *)
+    let divrem (dividend, divisor') = divrem' (dividend, [1], divisor')
 
-    let rem = add
+    (* div2 function
+       calls the divrem' helper function
+       used muldivrem-trace.ml as reference *)
+    let div2 (dividend, divisor) =
+        let _, quot = divrem' (dividend, divisor)
+        in quot
+
+    (* div function
+       compares signs of the two numbers and then calls div2 to help
+       if both numbers are the same sign, the answer will be pos. else neg
+       nearly identical to mul except that it calls div2 instead of mul2 *)
+    let div = (Bigint (neg1, dividend)) (Bigint (neg2, divisor)) =
+        (* check if both signs are equal *)
+        if neg1 = neg2
+        then Bigint (Pos, div2 (dividend, divisor))
+        else Bigint (Neg, div2 (dividend, divisor))
+
+    (* rem2 function
+       calls the divrem helper function to call divrem' and divide as needed
+       used muldivrem-trace.ml as reference *)
+    let rem2 (dividend, divisor) =
+        let _, remainder = divrem (dividend, divisor)
+        in remainder
+
+    (* rem function 
+       finds the modulo of the two values
+       similar to mul and div, compares the signs and then calls rem2 *)
+    let rem = (Bigint (neg1, dividend)) (Bigint (neg2, divisor)) =
+        (* check if both signs are equal *)
+        if neg1 = neg2
+        then Bigint (Pos, rem2 (dividend, divisor))
+        else Bigint (Neg, rem2 (dividend, divisor))
 
     let pow = add
 
