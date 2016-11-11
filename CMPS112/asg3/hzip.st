@@ -10,6 +10,28 @@
 
 
 
+" referenced from catfile.st provided by Mackey-----------------------------------
+  reads in the input file--------------------------------------------------------"
+
+FileStream extend [
+   nl := Character nl.
+   catFile [
+      |count|
+      count := 0.
+      [self atEnd not] whileTrue: [
+         count := count + 1.
+         count asString size to: 5 do: [:skip| stdout << ' '].
+         stdout << count << ': ' << self nextLine << nl.
+      ]
+   ]
+]
+
+
+
+
+
+
+
 " referenced from charfreq.st provided by Mackey-----------------------------------
   counts the number of times each character appears in input
   and creates frequency table-----------------------------------------------------"
