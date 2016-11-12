@@ -24,7 +24,7 @@ uopt := false.
 numargs := 0.
 
 " referenced from catfile.st provided by Mackey-----------------------------------
-  opens the input file"
+  opens the file"
 
 FileStream extend [
    nl := Character nl.
@@ -38,6 +38,67 @@ FileStream extend [
       ]
    ]
 ]
+
+
+" referenced from charfreq.st provided by Mackey----------------------------------
+  counts the number of times each char appears in the input"
+
+Character extend [
+   isPrint [
+      ^ (Character space <= self) & (self <= $~)
+   ]
+   visible [
+      self isPrint ifTrue: [^ '$', self asString]
+                   ifFalse: [^ self asInteger printStringRadix: 8]
+   ]
+]
+
+Object subclass: ZeroArray [
+   |theArray|
+
+   ZeroArray class >> new [
+      self shouldNotImplement.
+   ]
+
+   ZeroArray class >> new: size [
+      |result|
+      result := super new.
+      result init: size.
+      ^ result
+   ]
+
+   init: size [
+      theArray := Array new: size.
+   ]
+
+   size [
+      ^ theArray size.
+   ]
+
+   at: index [
+      ^ theArray at: index + 1.
+   ]
+
+   at: index put: value [
+      ^ theArray at: index + 1 put: value.
+   ]
+
+   incr: index [
+      (self at: index) isNil
+         ifTrue: [ self at: index put: 0].
+      self at: index put: (self at: index) + 1.
+   ]
+
+   keysAndValuesDo: aBlock [
+      (0 to: (self size) - 1) do: [:index |
+         aBlock value: index value: (self at: index).
+      ]
+   ]
+
+]
+
+freqtable := ZeroArray new: 257.
+freqtable at:256 put:1.
 
 
 " referenced from cmdline.st------------------------------------------------------
@@ -79,6 +140,19 @@ do: [:opt :arg |
          inputfiler2 := FileStream open: arg
                                    mode: FileStream read.
          stdout <<'inputfile pathed'<<nl.
+
+         [inputfiler1 atEnd not] whileTrue: [
+            |ordChar|
+            ordChar := inputfiler1 next asInteger.
+            freqtable incr: ordChar.
+         ].
+
+         freqtable keysAndValuesDo: [:key :value |
+            (value notNil and: [value > 0]) ifTrue: [
+               stdout <<  key asCharacter visible << '     ' << value
+             << nl.
+            ]
+         ].
       ]
 
       "if not the first arg, then assume its the output file.
@@ -97,3 +171,8 @@ do: [:opt :arg |
 
 inputfiler1 close.
 inputfiler2 close.
+
+"if there was an output file, close it."
+outputfile~=nil ifTrue:[
+   outputfile close.
+].
