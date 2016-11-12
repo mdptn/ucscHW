@@ -78,7 +78,7 @@ do: [:opt :arg |
                                    mode: FileStream read.
          inputfiler2 := FileStream open: arg
                                    mode: FileStream read.
-         stdout <<'inputfile is '<<nl.
+         stdout <<'inputfile pathed'<<nl.
       ]
 
       "if not the first arg, then assume its the output file.
@@ -86,6 +86,7 @@ do: [:opt :arg |
       ifFalse: [
          outputfile := FileStream open: arg
                                   mode: FileStream write.
+         stdout <<'outputfile pathed'<<nl.
       ].
 
       numargs := numargs + 1.
