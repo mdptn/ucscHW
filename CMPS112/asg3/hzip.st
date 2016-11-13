@@ -21,7 +21,7 @@ uopt := false.
 
 "initiallize input file read variables. two since the file is read TWICE.
  numargs counts the number of arguments after opt"
-|inputfiler1 inputfiler2 numargs outputfile decodingTree|
+|inputfiler1 inputfiler2 numargs outputfile dTree|
 numargs := 0.
 
 
@@ -99,10 +99,6 @@ Object subclass: ZeroArray [
 
 ]
 
-freqtable := ZeroArray new: 257.
-"at entry 256 put 1 to indicate EOF"
-freqtable at:256 put:1.
-
 
 " referenced from tree.st provided by Mackey----------------------------------
   counts the number of times each char appears in the input"
@@ -177,6 +173,13 @@ Leaf subclass: Tree [
 
 ]
 
+
+freqtable := ZeroArray new: 257.
+"at entry 256 put 1 to indicate EOF"
+freqtable at:256 put:1.
+
+encodingStrings := ZeroArray new: 257.
+
 pqueue := SortedCollection new.
 
 
@@ -226,7 +229,7 @@ do: [:opt :arg |
                                    mode: FileStream read.
          inputfiler2 := FileStream open: arg
                                    mode: FileStream read.
-         stdout <<'inputfile pathed'<<nl.
+         dopt ifTrue: [stdout << 'input file opened' << nl.].
 
       ]
 
@@ -235,7 +238,7 @@ do: [:opt :arg |
       ifFalse: [
          outputfile := FileStream open: arg
                                   mode: FileStream write.
-         stdout <<'outputfile pathed'<<nl.
+         dopt ifTrue: [stdout << 'output file opened' << nl.].
       ].
 
       numargs := numargs + 1.
@@ -271,23 +274,58 @@ uopt ifFalse: [
 
          "if debug option is on, show freq counts"
          dopt ifTrue: [
-         stdout << 'freq[' << key asCharacter visible << ']=' << value
-             << nl.
-         pqueue inspect.].
+            stdout << 'freq[' << key asCharacter visible << ']=' << value
+             << nl.].
       ]
    ].
 
    "Repeatedly remove the two smallest elements from the priority queue, creating
     a new tree which is then entered into the priority queue"
-    [pqueue size >= 2] whileTrue: [
+   dopt ifTrue: [stdout << 'building decoding tree...' << nl.].
+   [pqueue size >= 2] whileTrue: [
 
       |leftChild rightChild|
       leftChild := pqueue removeFirst.
       rightChild := pqueue removeFirst.
 
       nextTree := (Tree new: (leftChild char) count: (leftChild count) + (rightChild count) left: leftChild right: rightChild).
-      pqueue add: nextTree ; inspect.
-    ]
+      pqueue add: nextTree.
+
+   ].
+
+   "the remaining tree in the priority queue is the decoding tree."
+   dTree := pqueue removeFirst.
+   dopt ifTrue: [
+      stdout << 'decoding tree built' << nl.
+      dTree inspect.].
+
+   "Construct an encoding string, using a depth-first traversal. The encoding
+    string is a sequence of bits indicating the path from the root to a leaf
+    used tree.st as reference."
+
+   dopt ifTrue: [ stdout << 'constructing encoding strings...' << nl.].
+
+   dTree inorder: [:char :string |
+      encodingStrings at: char put: string.
+   ] prefix: ''.
+
+   dopt ifTrue: [ stdout << 'encoding strings constructed' << nl.].
+
+
+   "write out the encoding table sorted by character if t is on"
+   topt ifTrue: [
+
+      stdout << '-t: ENCODING TABLE---------------- ' << nl.
+
+      encodingStrings keysAndValuesDo: [:key :count |
+         (count notNil and: [count > 0]) ifTrue: [
+            stdout <<  key asCharacter visible << ' , '
+               << (freqtable at: key) << ' , ' <<count
+               << nl.
+         ]. 
+      ].
+   ].
+
 
 
 
