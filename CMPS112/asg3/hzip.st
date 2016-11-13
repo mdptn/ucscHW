@@ -19,9 +19,11 @@ copt := false.
 topt := false.
 uopt := false.
 
-" initiallize input file read variables. two since the file is read TWICE. numargs counts the number of arguments after opt"
-|inputfiler1 inputfiler2 numargs outputfile|
+"initiallize input file read variables. two since the file is read TWICE.
+ numargs counts the number of arguments after opt"
+|inputfiler1 inputfiler2 numargs outputfile decodingTree|
 numargs := 0.
+
 
 " referenced from catfile.st provided by Mackey-----------------------------------
   opens the file"
@@ -98,7 +100,84 @@ Object subclass: ZeroArray [
 ]
 
 freqtable := ZeroArray new: 257.
+"at entry 256 put 1 to indicate EOF"
 freqtable at:256 put:1.
+
+
+" referenced from tree.st provided by Mackey----------------------------------
+  counts the number of times each char appears in the input"
+
+Object subclass: Leaf [
+   |char count|
+   char [ ^ char ]
+   count [ ^ count ]
+
+   Leaf class >> new [
+      self shouldNotImplement
+   ]
+
+   Leaf class >> new: aChar count: aCount [
+      |result|
+      result := super new.
+      result setChar: aChar andCount: aCount.
+      ^result
+   ]
+
+   setChar: aChar andCount: aCount [
+      char := aChar.
+      count := aCount.
+   ]
+
+   <= other [
+      ^ (count < other count)
+      | ((count = other count) & (char <= other char))
+   ]
+
+   printBase: aStream [
+      ^ aStream << self class << '(' << char << ',' << count
+   ]
+
+   printOn: aStream [
+      (self printBase: aStream) << ')'.
+   ]
+
+   inorder: visitor prefix: string [
+      visitor value: char value: string.
+   ]
+
+]
+
+Leaf subclass: Tree [
+   |left right|
+
+   Tree class >> new: aChar count: aCount [
+      self shouldNotImplement
+   ]
+
+   Tree class >> new: aChar count: aCount left: aLeft right: aRight [
+      |result|
+      result := super new: aChar count: aCount.
+      result setLeft: aLeft andRight: aRight.
+      ^ result
+   ]
+
+   setLeft: aLeft andRight: aRight [
+      left := aLeft.
+      right := aRight.
+   ]
+
+   printOn: aStream [
+      (self printBase: aStream) << ',' << left << ',' << right << ')'.
+   ]
+
+   inorder: visitor prefix: string [
+      left inorder: visitor prefix: string, '0'.
+      right inorder: visitor prefix: string, '1'.
+   ]
+
+]
+
+pqueue := SortedCollection new.
 
 
 " referenced from cmdline.st------------------------------------------------------
@@ -110,22 +189,30 @@ do: [:opt :arg |
    "check for the options and turn them true if detected"
    (opt = $d) ifTrue: [
       dopt := true.
-      stdout <<'-d option is set'<<nl.
+
+      dopt ifTrue: [
+      stdout <<'-d option is on'<<nl.].
    ].
 
    (opt = $t) ifTrue: [
       topt := true.
-      stdout <<'-t option is set'<<nl.
+
+      dopt ifTrue: [
+      stdout <<'-t option is on'<<nl.].
    ].
    
    (opt = $c) ifTrue: [
       copt := true.
-      stdout <<'-c option is set'<<nl.
+
+      dopt ifTrue: [
+      stdout <<'-c option is on'<<nl.].
    ].
    
    (opt = $u) ifTrue: [
       uopt := true.
-      stdout <<'-u option is set'<<nl.
+      
+      dopt ifTrue: [
+      stdout <<'-u option is on'<<nl.].
    ].
    
 
@@ -141,18 +228,6 @@ do: [:opt :arg |
                                    mode: FileStream read.
          stdout <<'inputfile pathed'<<nl.
 
-         [inputfiler1 atEnd not] whileTrue: [
-            |ordChar|
-            ordChar := inputfiler1 next asInteger.
-            freqtable incr: ordChar.
-         ].
-
-         freqtable keysAndValuesDo: [:key :value |
-            (value notNil and: [value > 0]) ifTrue: [
-               stdout <<  key asCharacter visible << '     ' << value
-             << nl.
-            ]
-         ].
       ]
 
       "if not the first arg, then assume its the output file.
@@ -165,9 +240,44 @@ do: [:opt :arg |
 
       numargs := numargs + 1.
 
-
    ].
 ].
+
+
+"if the u option is on, perform decompression."
+uopt ifTrue: [
+
+   "perform decompression process"
+
+].
+
+
+"if the u option is not on, use the compression algorithm.
+ first construct the decoding tree, and if c option is on then perform compression"
+uopt ifFalse: [
+
+   "fill in the frequency table - referenced from charfreq.st"
+   [inputfiler1 atEnd not] whileTrue: [
+      |ordChar|
+      ordChar := inputfiler1 next asInteger.
+      freqtable incr: ordChar.
+   ].
+
+   freqtable keysAndValuesDo: [:key :value |
+      (value notNil and: [value > 0]) ifTrue: [
+
+         "create a leaf node and insert into a priority queue, with the character and count"
+         pqueue add: (Leaf new: key count: value); inspect.
+
+         "if debug option is on, show freq counts"
+         dopt ifTrue: [
+         stdout <<  key asCharacter visible << ': ' << value << nl.].
+      ]
+   ].
+
+].
+
+
 
 inputfiler1 close.
 inputfiler2 close.
