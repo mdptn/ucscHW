@@ -267,13 +267,29 @@ uopt ifFalse: [
       (value notNil and: [value > 0]) ifTrue: [
 
          "create a leaf node and insert into a priority queue, with the character and count"
-         pqueue add: (Leaf new: key count: value); inspect.
+         pqueue add: (Leaf new: key count: value).
 
          "if debug option is on, show freq counts"
          dopt ifTrue: [
-         stdout <<  key asCharacter visible << ': ' << value << nl.].
+         stdout << 'freq[' << key asCharacter visible << ']=' << value
+             << nl.
+         pqueue inspect.].
       ]
    ].
+
+   "Repeatedly remove the two smallest elements from the priority queue, creating
+    a new tree which is then entered into the priority queue"
+    [pqueue size >= 2] whileTrue: [
+
+      |leftChild rightChild|
+      leftChild := pqueue removeFirst.
+      rightChild := pqueue removeFirst.
+
+      nextTree := (Tree new: (leftChild char) count: (leftChild count) + (rightChild count) left: leftChild right: rightChild).
+      pqueue add: nextTree ; inspect.
+    ]
+
+
 
 ].
 
