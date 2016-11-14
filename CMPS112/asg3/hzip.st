@@ -243,53 +243,18 @@ do: [:opt :arg |
    "check for the options and turn them true if detected"
    (opt = $d) ifTrue: [
       dopt := true.
-
-      dopt ifTrue: [
-      stdout <<'-d option is on'<<nl.].
    ].
 
    (opt = $t) ifTrue: [
       topt := true.
-
-      dopt ifTrue: [
-      stdout <<'-t option is on'<<nl.].
    ].
    
    (opt = $c) ifTrue: [
       copt := true.
-
-      dopt ifTrue: [
-      stdout <<'-c option is on'<<nl.].
    ].
    
    (opt = $u) ifTrue: [
       uopt := true.
-      
-      dopt ifTrue: [
-      stdout <<'-u option is on'<<nl.].
-   ].
-
-
-   "make sure that u is not turned on with c or t. print usage and quit"
-   uopt ifTrue: [
-      copt ifTrue: [
-         stdout <<'cannot have -u with -c or -t.'<<nl.
-         ObjectMemory quit.
-      ].
-      topt ifTrue: [
-         stdout <<'cannot have -u with -c or -t.'<<nl.
-         ObjectMemory quit.
-      ].
-   ].
-
-   "make sure that u, c and/or t have been turned on"
-   uopt ifFalse: [
-      copt ifFalse: [
-         topt ifFalse: [
-            stdout <<'must include options -u, -c, or -t'<<nl.
-            ObjectMemory quit.
-         ].
-      ].
    ].
    
 
@@ -318,6 +283,44 @@ do: [:opt :arg |
 
       numargs := numargs + 1.
 
+   ].
+].
+
+
+"print debug statements for which options are on"
+dopt ifTrue: [
+   stdout <<'-d option is on'<<nl.
+
+   topt ifTrue: [
+      stdout <<'-t option is on'<<nl.].
+
+   copt ifTrue: [
+      stdout <<'-c option is on'<<nl.].
+
+   uopt ifTrue: [
+      stdout <<'-u option is on'<<nl.].
+].
+
+
+"make sure that u is not turned on with c or t. print usage and quit"
+uopt ifTrue: [
+   copt ifTrue: [
+      stdout <<'error: cannot have -u with -c or -t.'<<nl.
+      ObjectMemory quit.
+   ].
+   topt ifTrue: [
+      stdout <<'error: cannot have -u with -c or -t.'<<nl.
+      ObjectMemory quit.
+   ].
+].
+
+"make sure that u, c and/or t have been turned on"
+uopt ifFalse: [
+   copt ifFalse: [
+      topt ifFalse: [
+         stdout <<'error: must include options -u, -c, or -t'<<nl.
+         ObjectMemory quit.
+      ].
    ].
 ].
 
@@ -390,7 +393,7 @@ uopt ifFalse: [
    "write out the encoding table sorted by character if t is on"
    topt ifTrue: [
 
-      stdout << '-t: ENCODING TABLE------------------' << nl.
+      stdout << '-t: Encoding Table:-----------------' << nl.
 
       encodingStrings keysAndValuesDo: [:key :count |
          (count notNil and: [count > 0]) ifTrue: [
@@ -403,8 +406,8 @@ uopt ifFalse: [
       stdout << '------------------------------------' << nl.
    ].
 
-   "if t is not on, write out the encoding table using post order traversal"
-   topt ifFalse: [
+   "for when c is on, write out the encoding table using post order traversal"
+   copt ifTrue: [
       "beginning of encoding string, empty"
       postTree := ''.
       binNumber := ''. "binary number helper"
@@ -436,12 +439,14 @@ uopt ifFalse: [
             postTree := postTree, '1'.].
 
       ].
-      stdout << 'postorder encoding string:----------' << nl.
+      stdout << '-t: postorder encoding string:------' << nl.
       stdout << postTree << nl.
       stdout << '------------------------------------' << nl.
 
 
-      "start file compression"
+      dopt ifTrue: [
+         stdout << 'starting file compression...' << nl.].
+
       "if there's an outputfile, write to it. if not then write to stdout"
       outputfile ~= nil ifTrue: [
 
@@ -469,6 +474,9 @@ uopt ifFalse: [
 
          outBytes writeBit: 1.    
          outBytes flushByte.
+
+         dopt ifTrue: [
+         stdout << 'output sent to output file.' << nl.].
       ]
 
       "if no output file, print to stdout"
@@ -500,17 +508,11 @@ uopt ifFalse: [
 
          outBytes writeBit: 1.    
          outBytes flushByte.
-         
+
          Transcript cr.
          stdout << '------------------------------------' << nl.
       ].
-
-
    ].
-
-
-
-
 ].
 
 
