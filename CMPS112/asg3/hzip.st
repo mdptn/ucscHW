@@ -50,8 +50,8 @@ Character extend [
       ^ (Character space <= self) & (self <= $~)
    ]
    visible [
-      self isPrint ifTrue: [^ '$', self asString]
-                   ifFalse: [^ self asInteger printStringRadix: 8]
+      self isPrint ifTrue: [^ self asString]
+                   ifFalse: [^ self asInteger printString]
    ]
 ]
 
@@ -104,9 +104,10 @@ Object subclass: ZeroArray [
   counts the number of times each char appears in the input"
 
 Object subclass: Leaf [
-   |char count|
+   |char count leaf|
    char [ ^ char ]
    count [ ^ count ]
+   leaf [^ leaf]
 
    Leaf class >> new [
       self shouldNotImplement
@@ -122,6 +123,7 @@ Object subclass: Leaf [
    setChar: aChar andCount: aCount [
       char := aChar.
       count := aCount.
+      leaf := true.
    ]
 
    <= other [
@@ -139,6 +141,10 @@ Object subclass: Leaf [
 
    inorder: visitor prefix: string [
       visitor value: char value: string.
+   ]
+
+   postorder: visitor [
+      visitor value: char value: leaf.
    ]
 
 ]
@@ -160,7 +166,11 @@ Leaf subclass: Tree [
    setLeft: aLeft andRight: aRight [
       left := aLeft.
       right := aRight.
+      leaf := false.
    ]
+
+   left  [ ^ left]
+   right [ ^ right]
 
    printOn: aStream [
       (self printBase: aStream) << ',' << left << ',' << right << ')'.
@@ -169,6 +179,12 @@ Leaf subclass: Tree [
    inorder: visitor prefix: string [
       left inorder: visitor prefix: string, '0'.
       right inorder: visitor prefix: string, '1'.
+   ]
+
+   postorder: visitor[      
+      left postorder: visitor.
+      right postorder: visitor.  
+      visitor value: char value: leaf.
    ]
 
 ]
@@ -324,6 +340,44 @@ uopt ifFalse: [
                << nl.
          ]. 
       ].
+   ].
+
+   "if t is not on, write out the encoding table using post order traversal"
+   topt ifFalse: [
+      "beginning of encoding string, empty"
+      postTree := ''.
+      binNumber := ''. "binary number helper"
+      dTree postorder: [:char :leaf |
+
+         "if leaf, write out a 0 bit, + the 8 bits of the corresponding byte"
+         leaf ifTrue: [
+            binNumber := ''.
+
+            "if char is 0, write out 000000000"
+            char = 0 ifTrue: [binNumber := '000000000'.].
+
+            char = 0 ifFalse: [
+
+               "if char is 256/EOF, write out 00000001"
+               char = 256 ifTrue: [binNumber := '000000001'.].
+
+               char = 256 ifFalse: [
+                  8 to:1 by: -1 do:[:i |
+                     binNumber := binNumber, ((char bitAt:i) printString).].
+               ].
+            ].
+            "add 0 bit + 8 bits"
+            postTree := postTree, '0', binNumber.
+         ].
+
+         "if not a leaf, then it's an interior node. write out 1 bit "
+         leaf ifFalse: [
+            postTree := postTree, '1'.].
+
+      ].
+      stdout << 'postorder encoding string:---------------' << nl.
+      stdout << postTree << nl.
+
    ].
 
 
