@@ -189,7 +189,8 @@ Leaf subclass: Tree [
 ]
 
 
-" referenced from outbits.st provided by Mackey----------------------------------"
+" referenced from outbits.st provided by Mackey-----------------------------------
+  writes out bits"
 
 Object subclass: OutBits [
    |bitIndex currentByte myStream|
@@ -223,6 +224,35 @@ Object subclass: OutBits [
    ]
 ]
 
+" referenced from bitstream.st provided by Mackey----------------------------------"
+
+Object subclass: BitStream [
+   |bitIndex byte myStream|
+   BitStream class >> new: fileStream [
+      |result|
+      result := super new.
+      result init: fileStream.
+      ^result
+   ]
+   init: fileStream [
+      myStream := fileStream.
+      bitIndex := 1.
+   ]
+   nextBit [
+      bitIndex = 1 ifTrue: [
+         byte := myStream next.
+         bitIndex := 9.
+      ].
+      bitIndex := bitIndex - 1.
+      ^byte value bitAt: bitIndex
+   ]
+   atEnd [
+      ^bitIndex = 1 and: [myStream atEnd]
+   ]
+   currByte [
+      ^byte
+   ]
+]
 
 
 freqtable := ZeroArray new: 257.
@@ -325,15 +355,17 @@ uopt ifFalse: [
 ].
 
 
-"if the u option is on, perform decompression."
+"if the u option is on, perform decompression.-----------------------------------"
 uopt ifTrue: [
 
    "perform decompression process"
+   dopt ifTrue: [
+         stdout << 'starting file uncompression...' << nl.].
 
 ].
 
 
-"if the u option is not on, use the compression algorithm.
+"if the u option is not on, use the compression algorithm-------------------------
  first construct the decoding tree, and if c option is on then perform compression"
 uopt ifFalse: [
 
