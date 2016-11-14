@@ -357,10 +357,87 @@ uopt ifFalse: [
 
 "if the u option is on, perform decompression.-----------------------------------"
 uopt ifTrue: [
+   |stack atend outBytes|
 
-   "perform decompression process"
+   "perform decompression process- Reconstruct the Huffman decoding tree."
    dopt ifTrue: [
-         stdout << 'starting file uncompression...' << nl.].
+         stdout << 'Reconstructing the decoding tree...' << nl.].
+
+   atend := false. "end of file indicator"
+   reconstructed := false.
+   dTree := ''.
+   outBytes := OutBits new: outputfile.
+   inputBits := BitStream new: inputfiler1.
+   stack := OrderedCollection new.
+
+   [(inputBits atEnd not) & (atend not)] whileTrue: [
+
+      charvalue := 0.
+      "read one bit at a time"
+      nodet := inputBits nextBit.
+
+      reconstructed ifFalse: [
+
+         "if the bit is 0, read the next 8 bits and reconstruct the byte,
+          giving a value from 0 to 255"
+         nodet = 0 ifTrue: [
+            8 to:1 by:-1 do: [:i |
+               bit := inputBits nextBit.
+               charvalue := charvalue bitAt: i put: bit.].
+
+            "if value is 0, read one more bit"
+            charvalue = 0 ifTrue: [
+               eofBit := inputBits nextBit.
+               "if the next bit is 1, give the encoding for EOF"
+               eofBit = 1 ifTrue: [
+                  charvalue := charvalue bitAt:9 put:1.].
+            ].
+            "push the byte to the stack"
+            stack add: (Leaf new: charvalue count: '').
+         ].
+
+         "if the bit is 1, create a new tree using the last two leaf in the stack"
+         nodet = 1 ifTrue: [
+            
+            "if the stack has more than one item in it, the tree isn't rebuilt yet"
+            stack size > 1 ifTrue:[
+               "pop the 1-subtree and 0-subtree from the stack"
+               onesubtree := stack removeLast.
+               zerosubtree := stack removeLast.
+
+               "create a new tree with both those children and push it to the stack"
+               subtree := (Tree new: -1 count: '' left: zerosubtree right: onesubtree).
+               stack add: subtree.
+
+            ] ifFalse: [
+               "if the size is not greater than 1, there is only 1 tree left."
+               reconstructed := true.
+               dTree := stack removeLast.
+
+               dopt ifTrue: [
+                  stdout << dTree << nl.
+                  stdout << 'Decoding tree has been reconstructed.' << nl.].
+            ].
+
+
+         ]. 
+
+
+
+
+
+
+      ].
+
+
+
+
+
+
+
+   ].
+
+
 
 ].
 
@@ -454,7 +531,7 @@ uopt ifFalse: [
 
             char = 0 ifFalse: [
 
-               "if char is 256/EOF, write out 00000001"
+               "if char is 256/EOF, write out 000000001"
                char = 256 ifTrue: [binNumber := '000000001'.].
 
                char = 256 ifFalse: [
@@ -503,6 +580,8 @@ uopt ifFalse: [
             1 to: (eof size) by: 1 do: [:index |
                bit:= ((eof at: index) asInteger) - 48.
             outBytes writeBit: bit.]. 
+
+         stdout << bit << nl.
 
          outBytes writeBit: 1.    
          outBytes flushByte.
