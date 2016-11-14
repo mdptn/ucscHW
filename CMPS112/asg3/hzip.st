@@ -366,6 +366,7 @@ uopt ifTrue: [
    atend := false. "end of file indicator"
    reconstructed := false.
    dTree := ''.
+   pointer := ''.
    outBytes := OutBits new: outputfile.
    inputBits := BitStream new: inputfiler1.
    stack := OrderedCollection new.
@@ -411,34 +412,111 @@ uopt ifTrue: [
 
             ] ifFalse: [
                "if the size is not greater than 1, there is only 1 tree left."
-               reconstructed := true.
                dTree := stack removeLast.
+
+               "initiallize a pointer to the root of the decoding tree"
+               pointer := dTree.
 
                dopt ifTrue: [
                   stdout << dTree << nl.
-                  stdout << 'Decoding tree has been reconstructed.' << nl.].
+                  stdout << 'Decoding tree has been reconstructed.' << nl.
+                  stdout << 'Starting uncompressing...' << nl.].
+
+               reconstructed := true.
             ].
-
-
          ]. 
-
-
-
-
-
-
       ].
 
+      "once the decoding tree has been reconstructed, start uncompressing"
+      "loop over the rest of the input file to reconstruct the original file"
+      reconstructed ifTrue: [
 
+         "Read a single bit and use it to move down the 0-link or the 1-link
+         to the child of the current node - line 378, nodet reads the bit"
 
+         "If this node is a leaf, write out the corresponding byte"
+         pointer leaf ifTrue: [
 
+            "if the leaf is 256, thats the end of the file"
+            pointer char = 256 ifTrue: [
+               atend := true.
+            ].
+            pointer char = 256 ifFalse: [
+               stdout nextPut: (Character value: (pointer char)).
 
+               "reset the pointer back to the root of the tree"
+               pointer := dTree.
+            ].
+         ].
 
+         "If not a leaf, continue reading bits until you find a leaf."
+         pointer leaf ifFalse: [
 
+            "if the bit is 0, move left"
+            nodet = 0 ifTrue: [
+               pointer := pointer left.
+
+               pointer leaf ifTrue: [
+
+                  pointer char = 256 ifTrue: [
+                     atend := true.
+                  ].
+
+                  pointer char = 256 ifFalse: [
+
+                     "if theres an output file, write to it"
+                     outputfile ~= nil ifTrue: [
+                        8 to: 1 by: -1 do: [:index |
+                           bit:= (pointer char) bitAt: index.
+                           outBytes writeBit: bit.].
+                     ].
+
+                     "if there is no output file, write to stdout"
+                     outputfile ~= nil ifFalse: [
+                        stdout nextPut: (Character value: (pointer char)).
+                     ].
+
+                     "reset the pointer back to the root of the tree"
+                     pointer := dTree.
+                  ].
+
+               ].
+
+            ].
+
+            "if the node is not 0, it is 1. move right"
+            nodet = 0 ifFalse:[
+               pointer := pointer right.
+
+               "code below is the same as the code above"
+               pointer leaf ifTrue: [
+
+                  pointer char = 256 ifTrue: [
+                     atend := true.
+                  ].
+
+                  pointer char = 256 ifFalse: [
+
+                     "if theres an output file, write to it"
+                     outputfile ~= nil ifTrue: [
+                        8 to: 1 by: -1 do: [:index |
+                           bit:= (pointer char) bitAt: index.
+                           outBytes writeBit: bit.].
+                     ].
+
+                     "if there is no output file, write to stdout"
+                     outputfile ~= nil ifFalse: [
+                        stdout nextPut: (Character value: (pointer char)).
+                     ].
+
+                     "reset the pointer back to the root of the tree"
+                     pointer := dTree.
+                  ].
+               ].
+            ].
+         ].
+      ].
    ].
-
-
-
 ].
 
 
