@@ -100,8 +100,7 @@ Object subclass: ZeroArray [
 ]
 
 
-" referenced from tree.st provided by Mackey----------------------------------
-  counts the number of times each char appears in the input"
+" referenced from tree.st provided by Mackey-------------------------------------"
 
 Object subclass: Leaf [
    |char count leaf|
@@ -190,6 +189,42 @@ Leaf subclass: Tree [
 ]
 
 
+" referenced from outbits.st provided by Mackey----------------------------------"
+
+Object subclass: OutBits [
+   |bitIndex currentByte myStream|
+   OutBits class >> new [
+      self shouldNotImplement.
+   ]
+   OutBits class >> new: fileStream [
+      |result|
+      result := super new.
+      result init: fileStream.
+      ^result
+   ]
+   clearByte [
+      bitIndex := 8.
+      currentByte := 0.
+   ]
+   init: fileStream [
+      myStream := fileStream.
+      self clearByte.
+   ]
+   flushByte [
+      bitIndex = 8 ifFalse: [
+         myStream nextPutByte: currentByte.
+         self clearByte.
+      ]
+   ]
+   writeBit: bit [
+      currentByte := currentByte bitAt: bitIndex put: bit.
+      bitIndex := bitIndex - 1.
+      bitIndex = 0 ifTrue: [self flushByte].
+   ]
+]
+
+
+
 freqtable := ZeroArray new: 257.
 "at entry 256 put 1 to indicate EOF"
 freqtable at:256 put:1.
@@ -233,6 +268,29 @@ do: [:opt :arg |
       dopt ifTrue: [
       stdout <<'-u option is on'<<nl.].
    ].
+
+
+   "make sure that u is not turned on with c or t. print usage and quit"
+   uopt ifTrue: [
+      copt ifTrue: [
+         stdout <<'cannot have -u with -c or -t.'<<nl.
+         ObjectMemory quit.
+      ].
+      topt ifTrue: [
+         stdout <<'cannot have -u with -c or -t.'<<nl.
+         ObjectMemory quit.
+      ].
+   ].
+
+   "make sure that u, c and/or t have been turned on"
+   uopt ifFalse: [
+      copt ifFalse: [
+         topt ifFalse: [
+            stdout <<'must include options -u, -c, or -t'<<nl.
+            ObjectMemory quit.
+         ].
+      ].
+   ].
    
 
    "check if arg is null. arg should be the input filename"
@@ -240,9 +298,10 @@ do: [:opt :arg |
 
       "if 0, this is the first arg, aka the inputfile."
       numargs = 0 ifTrue: [
-         "open the file twice since it will be read twice"
+         "first read is to construct the decoding tree"
          inputfiler1 := FileStream open: arg
                                    mode: FileStream read.
+         "second read is for compression"
          inputfiler2 := FileStream open: arg
                                    mode: FileStream read.
          dopt ifTrue: [stdout << 'input file opened' << nl.].
@@ -331,7 +390,7 @@ uopt ifFalse: [
    "write out the encoding table sorted by character if t is on"
    topt ifTrue: [
 
-      stdout << '-t: ENCODING TABLE---------------- ' << nl.
+      stdout << '-t: ENCODING TABLE------------------' << nl.
 
       encodingStrings keysAndValuesDo: [:key :count |
          (count notNil and: [count > 0]) ifTrue: [
@@ -340,6 +399,8 @@ uopt ifFalse: [
                << nl.
          ]. 
       ].
+
+      stdout << '------------------------------------' << nl.
    ].
 
    "if t is not on, write out the encoding table using post order traversal"
@@ -377,6 +438,73 @@ uopt ifFalse: [
       ].
       stdout << 'postorder encoding string:----------' << nl.
       stdout << postTree << nl.
+      stdout << '------------------------------------' << nl.
+
+
+      "start file compression"
+      "if there's an outputfile, write to it. if not then write to stdout"
+      outputfile ~= nil ifTrue: [
+
+         "write out the encoded version of each byte"
+         outBytes := OutBits new: outputfile.
+         1 to: (postTree size) by: 1 do: [:index |
+            bit:= ((postTree at: index) asInteger) - 48.
+         outBytes writeBit: bit.].
+
+         
+         [inputfiler2 atEnd not] whileTrue: [
+            |ordChar2|
+            ordChar2 := inputfiler2 next asInteger.
+            code:= (encodingStrings at: ordChar2). 
+            1 to: (code size) by: 1 do: [:index |
+               bit:= ((code at: index) asInteger) - 48.
+            outBytes writeBit: bit.].
+         ].
+
+         "at the end of the buffer, write out the string for EOF"
+         eof:= (encodingStrings at: 256).
+            1 to: (eof size) by: 1 do: [:index |
+               bit:= ((eof at: index) asInteger) - 48.
+            outBytes writeBit: bit.]. 
+
+         outBytes writeBit: 1.    
+         outBytes flushByte.
+      ]
+
+      "if no output file, print to stdout"
+      ifFalse: [
+
+         stdout << 'Compressed Contents:----------------' << nl.
+
+         "write out the encoded version of each byte"
+         outBytes := OutBits new: stdout.
+         1 to: (postTree size) by: 1 do: [:index |
+            bit:= ((postTree at: index) asInteger) - 48.
+         outBytes writeBit: bit.].
+
+         
+         [inputfiler2 atEnd not] whileTrue: [
+            |ordChar2|
+            ordChar2 := inputfiler2 next asInteger.
+            code:= (encodingStrings at: ordChar2). 
+            1 to: (code size) by: 1 do: [:index |
+               bit:= ((code at: index) asInteger) - 48.
+            outBytes writeBit: bit.].
+         ].
+
+         "at the end of the buffer, write out the string for EOF"
+         eof:= (encodingStrings at: 256).
+            1 to: (eof size) by: 1 do: [:index |
+               bit:= ((eof at: index) asInteger) - 48.
+            outBytes writeBit: bit.]. 
+
+         outBytes writeBit: 1.    
+         outBytes flushByte.
+         
+         Transcript cr.
+         stdout << '------------------------------------' << nl.
+      ].
+
 
    ].
 
