@@ -375,7 +375,7 @@ uopt ifFalse: [
             postTree := postTree, '1'.].
 
       ].
-      stdout << 'postorder encoding string:---------------' << nl.
+      stdout << 'postorder encoding string:----------' << nl.
       stdout << postTree << nl.
 
    ].
