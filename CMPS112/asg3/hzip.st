@@ -662,6 +662,8 @@ uopt ifFalse: [
             bit:= ((postTree at: index) asInteger) - 48.
          outBytes writeBit: bit.].
 
+         outBytes writeBit: 1.
+
          
          [inputfiler2 atEnd not] whileTrue: [
             |ordChar2|
@@ -677,8 +679,7 @@ uopt ifFalse: [
             1 to: (eof size) by: 1 do: [:index |
                bit:= ((eof at: index) asInteger) - 48.
             outBytes writeBit: bit.]. 
-
-         outBytes writeBit: 1.    
+    
          outBytes flushByte.
 
          dopt ifTrue: [
