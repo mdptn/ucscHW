@@ -455,18 +455,7 @@ uopt ifTrue: [
                atend := true.
             ].
             pointer char = 256 ifFalse: [
-
-               "if theres an output file, write to it"
-               outputfile ~= nil ifTrue: [
-                  8 to: 1 by: -1 do: [:index |
-                     bit:= (pointer char) bitAt: index.
-                     outBytes writeBit: bit.].
-               ].
-
-               "if there is no output file, write to stdout"
-               outputfile ~= nil ifFalse: [
-                  stdout nextPut: (Character value: (pointer char)).
-               ].
+               stdout nextPut: (Character value: (pointer char)).
 
                "reset the pointer back to the root of the tree"
                pointer := dTree.
@@ -512,35 +501,33 @@ uopt ifTrue: [
 
             "if the node is not 0, it is 1. move right"
             nodet = 0 ifFalse:[
-
-               "move the bit right since the bit is 1, not 0"
                pointer := pointer right.
 
                "code below is the same as the code above"
                pointer leaf ifTrue: [
-                  atend not ifTrue: [
-                     pointer char = 256 ifTrue: [
-                        dopt ifTrue: [
-                           stdout << 'Finished uncompressing.' << nl.].
-                        atend := true.
+
+                  pointer char = 256 ifTrue: [
+                     dopt ifTrue: [
+                        stdout << 'Finished uncompressing.' << nl.].
+                     atend := true.
+                  ].
+
+                  pointer char = 256 ifFalse: [
+
+                     "if theres an output file, write to it"
+                     outputfile ~= nil ifTrue: [
+                        8 to: 1 by: -1 do: [:index |
+                           bit:= (pointer char) bitAt: index.
+                           outBytes writeBit: bit.].
                      ].
 
-                     pointer char = 256 ifFalse: [
-                        "if theres an output file, write to it"
-                        outputfile ~= nil ifTrue: [
-                           8 to: 1 by: -1 do: [:index |
-                              bit:= (pointer char) bitAt: index.
-                              outBytes writeBit: bit.].
-                        ].
-
-                        "if there is no output file, write to stdout"
-                        outputfile ~= nil ifFalse: [
-                           stdout nextPut: (Character value: (pointer char)).
-
-                        ].
-                        "reset the pointer back to the root of the tree"
-                        pointer := dTree.
+                     "if there is no output file, write to stdout"
+                     outputfile ~= nil ifFalse: [
+                        stdout nextPut: (Character value: (pointer char)).
                      ].
+
+                     "reset the pointer back to the root of the tree"
+                     pointer := dTree.
                   ].
                ].
             ].
@@ -673,41 +660,6 @@ uopt ifFalse: [
          outBytes := OutBits new: outputfile.
          1 to: (postTree size) by: 1 do: [:index |
             bit:= ((postTree at: index) asInteger) - 48.
-            outBytes writeBit: bit.].
-
-         outBytes writeBit: 1.
-
-         
-         [inputfiler2 atEnd not] whileTrue: [
-            |ordChar2|
-            ordChar2 := inputfiler2 next asInteger.
-            code:= (encodingStrings at: ordChar2). 
-            1 to: (code size) by: 1 do: [:index |
-               bit:= ((code at: index) asInteger) - 48.
-            outBytes writeBit: bit.].
-         ].
-
-         "at the end of the buffer, write out the string for EOF"
-         eof:= (encodingStrings at: 256).
-            1 to: (eof size) by: 1 do: [:index |
-               bit:= ((eof at: index) asInteger) - 48.
-            outBytes writeBit: bit.]. 
-   
-         outBytes flushByte.
-
-         dopt ifTrue: [
-         stdout << 'Output sent to output file.' << nl.].
-      ]
-
-      "if no output file, print to stdout"
-      ifFalse: [
-
-         stdout << 'Compressed Contents:----------------' << nl.
-
-         "write out the encoded version of each byte"
-         outBytes := OutBits new: stdout.
-         1 to: (postTree size) by: 1 do: [:index |
-            bit:= ((postTree at: index) asInteger) - 48.
          outBytes writeBit: bit.].
 
          outBytes writeBit: 1.
@@ -727,7 +679,41 @@ uopt ifFalse: [
             1 to: (eof size) by: 1 do: [:index |
                bit:= ((eof at: index) asInteger) - 48.
             outBytes writeBit: bit.]. 
-  
+    
+         outBytes flushByte.
+
+         dopt ifTrue: [
+         stdout << 'Output sent to output file.' << nl.].
+      ]
+
+      "if no output file, print to stdout"
+      ifFalse: [
+
+         stdout << 'Compressed Contents:----------------' << nl.
+
+         "write out the encoded version of each byte"
+         outBytes := OutBits new: stdout.
+         1 to: (postTree size) by: 1 do: [:index |
+            bit:= ((postTree at: index) asInteger) - 48.
+         outBytes writeBit: bit.].
+
+         
+         [inputfiler2 atEnd not] whileTrue: [
+            |ordChar2|
+            ordChar2 := inputfiler2 next asInteger.
+            code:= (encodingStrings at: ordChar2). 
+            1 to: (code size) by: 1 do: [:index |
+               bit:= ((code at: index) asInteger) - 48.
+            outBytes writeBit: bit.].
+         ].
+
+         "at the end of the buffer, write out the string for EOF"
+         eof:= (encodingStrings at: 256).
+            1 to: (eof size) by: 1 do: [:index |
+               bit:= ((eof at: index) asInteger) - 48.
+            outBytes writeBit: bit.]. 
+
+         outBytes writeBit: 1.    
          outBytes flushByte.
 
          Transcript cr.
