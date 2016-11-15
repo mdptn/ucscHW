@@ -8,6 +8,9 @@
 " mednguye@ucsc.edu "
 
 
+"line below referenced from cmdline.st. not sure if needed yet"
+execname := '$RCSfile: cmdline.st,v $' =~ '.*: (.*),v.*' at: 1.
+
 nl := Character nl.
 
 "initiallize flag options"
@@ -221,7 +224,6 @@ Object subclass: OutBits [
    ]
 ]
 
-
 " referenced from bitstream.st provided by Mackey----------------------------------"
 
 Object subclass: BitStream [
@@ -252,8 +254,6 @@ Object subclass: BitStream [
    ]
 ]
 
-
-"initiallize tables and collections----------------------------------------------"
 
 freqtable := ZeroArray new: 257.
 "at entry 256 put 1 to indicate EOF"
@@ -288,34 +288,27 @@ do: [:opt :arg |
    ].
    
 
-"open the input file and output file if there is one-----------------------------"
-
    "check if arg is null. arg should be the input filename"
    (arg ~= nil) ifTrue: [
 
       "if 0, this is the first arg, aka the inputfile."
       numargs = 0 ifTrue: [
-
          "first read is to construct the decoding tree"
          inputfiler1 := FileStream open: arg
                                    mode: FileStream read.
-
          "second read is for compression"
          inputfiler2 := FileStream open: arg
                                    mode: FileStream read.
-
-         dopt ifTrue: [stdout << 'Input file opened' << nl.].
+         dopt ifTrue: [stdout << 'input file opened' << nl.].
 
       ]
 
       "if not the first arg, then assume its the output file.
        open the file in write mode"
       ifFalse: [
-
          outputfile := FileStream open: arg
                                   mode: FileStream write.
-
-         dopt ifTrue: [stdout << 'Output file opened' << nl.].
+         dopt ifTrue: [stdout << 'output file opened' << nl.].
       ].
 
       numargs := numargs + 1.
@@ -324,8 +317,7 @@ do: [:opt :arg |
 ].
 
 
-"print debug statements for which options are on---------------------------------"
-
+"print debug statements for which options are on"
 dopt ifTrue: [
    stdout <<'-d option is on'<<nl.
 
@@ -340,16 +332,14 @@ dopt ifTrue: [
 ].
 
 
-"usage---------------------------------------------------------------------------"
-
 "make sure that u is not turned on with c or t. print usage and quit"
 uopt ifTrue: [
    copt ifTrue: [
-      stderr <<'error: cannot have -u with -c or -t.'<<nl.
+      stdout <<'error: cannot have -u with -c or -t.'<<nl.
       ObjectMemory quit.
    ].
    topt ifTrue: [
-      stderr <<'error: cannot have -u with -c or -t.'<<nl.
+      stdout <<'error: cannot have -u with -c or -t.'<<nl.
       ObjectMemory quit.
    ].
 ].
@@ -358,16 +348,15 @@ uopt ifTrue: [
 uopt ifFalse: [
    copt ifFalse: [
       topt ifFalse: [
-         stderr <<'error: must include options -u, -c, or -t'<<nl.
+         stdout <<'error: must include options -u, -c, or -t'<<nl.
          ObjectMemory quit.
       ].
    ].
 ].
 
 
-"if the u option is on, perform UNCOMPRESSION.-----------------------------------"
+"if the u option is on, perform decompression.-----------------------------------"
 uopt ifTrue: [
-
    |stack atend outBytes|
 
    "perform decompression process- Reconstruct the Huffman decoding tree."
@@ -450,8 +439,6 @@ uopt ifTrue: [
 
             "if the leaf is 256, thats the end of the file"
             pointer char = 256 ifTrue: [
-               dopt ifTrue: [
-                  stdout << 'Finished uncompressing.' << nl.].
                atend := true.
             ].
             pointer char = 256 ifFalse: [
@@ -472,8 +459,6 @@ uopt ifTrue: [
                pointer leaf ifTrue: [
 
                   pointer char = 256 ifTrue: [
-                     dopt ifTrue: [
-                        stdout << 'Finished uncompressing.' << nl.].
                      atend := true.
                   ].
 
@@ -507,8 +492,6 @@ uopt ifTrue: [
                pointer leaf ifTrue: [
 
                   pointer char = 256 ifTrue: [
-                     dopt ifTrue: [
-                        stdout << 'Finished uncompressing.' << nl.].
                      atend := true.
                   ].
 
@@ -537,12 +520,9 @@ uopt ifTrue: [
 ].
 
 
-"if the u option is not on, use the COMPRESSION algorithm-------------------------
+"if the u option is not on, use the compression algorithm-------------------------
  first construct the decoding tree, and if c option is on then perform compression"
 uopt ifFalse: [
-
-   dopt ifTrue: [
-      stdout << 'Building frequency table...' << nl.].
 
    "fill in the frequency table - referenced from charfreq.st"
    [inputfiler1 atEnd not] whileTrue: [
@@ -556,15 +536,17 @@ uopt ifFalse: [
 
          "create a leaf node and insert into a priority queue, with the character and count"
          pqueue add: (Leaf new: key count: value).
+
+         "if debug option is on, show freq counts"
+         dopt ifTrue: [
+            stdout << 'freq[' << key asCharacter visible << ']=' << value
+             << nl.].
       ]
    ].
 
-   dopt ifTrue: [
-      stdout << 'Frequency table built.' << nl.].
-
    "Repeatedly remove the two smallest elements from the priority queue, creating
     a new tree which is then entered into the priority queue"
-   dopt ifTrue: [stdout << 'Building decoding tree...' << nl.].
+   dopt ifTrue: [stdout << 'building decoding tree...' << nl.].
    [pqueue size >= 2] whileTrue: [
 
       |leftChild rightChild|
@@ -579,24 +561,23 @@ uopt ifFalse: [
    "the remaining tree in the priority queue is the decoding tree."
    dTree := pqueue removeFirst.
    dopt ifTrue: [
-      stdout << 'Decoding tree built.' << nl.
-      stdout << dTree << nl.].
+      stdout << 'decoding tree built' << nl.
+      dTree inspect.].
 
    "Construct an encoding string, using a depth-first traversal. The encoding
     string is a sequence of bits indicating the path from the root to a leaf
     used tree.st as reference."
 
-   dopt ifTrue: [ stdout << 'Constructing encoding strings...' << nl.].
+   dopt ifTrue: [ stdout << 'constructing encoding strings...' << nl.].
 
    dTree inorder: [:char :string |
       encodingStrings at: char put: string.
    ] prefix: ''.
 
-   dopt ifTrue: [ stdout << 'Encoding strings constructed' << nl.].
+   dopt ifTrue: [ stdout << 'encoding strings constructed' << nl.].
 
 
    "write out the encoding table sorted by character if t is on"
-   "Format should appear as if done by the C format items %3d %5d %s"
    topt ifTrue: [
 
       stdout << '-t: Encoding Table:-----------------' << nl.
@@ -645,13 +626,13 @@ uopt ifFalse: [
             postTree := postTree, '1'.].
 
       ].
-      stdout << '-c: postorder encoding string:------' << nl.
+      stdout << '-t: postorder encoding string:------' << nl.
       stdout << postTree << nl.
       stdout << '------------------------------------' << nl.
 
 
       dopt ifTrue: [
-         stdout << 'Starting file compression...' << nl.].
+         stdout << 'starting file compression...' << nl.].
 
       "if there's an outputfile, write to it. if not then write to stdout"
       outputfile ~= nil ifTrue: [
@@ -678,11 +659,13 @@ uopt ifFalse: [
                bit:= ((eof at: index) asInteger) - 48.
             outBytes writeBit: bit.]. 
 
+         stdout << bit << nl.
+
          outBytes writeBit: 1.    
          outBytes flushByte.
 
          dopt ifTrue: [
-         stdout << 'Output sent to output file.' << nl.].
+         stdout << 'output sent to output file.' << nl.].
       ]
 
       "if no output file, print to stdout"
@@ -730,6 +713,3 @@ inputfiler2 close.
 outputfile~=nil ifTrue:[
    outputfile close.
 ].
-
-dopt ifTrue: [
-   stdout << 'Done.' << nl.].
