@@ -96,8 +96,7 @@ get_departure_time(X, Y, time(HourA, MinA)) :-
         print(ArrHour),
         print(':'),
         print(ArrMin),
-        nl,
-        print(Distance).
+        nl.
 
 
 
