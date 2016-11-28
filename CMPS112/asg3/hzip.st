@@ -457,16 +457,16 @@ uopt ifTrue: [
             pointer char = 256 ifFalse: [
 
                "if theres an output file, write to it"
-               outputfile ~= nil ifTrue: [
-                  8 to: 1 by: -1 do: [:index |
-                     bit:= (pointer char) bitAt: index.
-                     outBytes writeBit: bit.].
-               ].
+               "outputfile ~= nil ifTrue: [
+                                 8 to: 1 by: -1 do: [:index |
+                                    bit:= (pointer char) bitAt: index.
+                                    outBytes writeBit: bit.].
+                              ]."
 
                "if there is no output file, write to stdout"
-               outputfile ~= nil ifFalse: [
-                  stdout nextPut: (Character value: (pointer char)).
-               ].
+               "outputfile ~= nil ifFalse: [
+                                 stdout nextPut: (Character value: (pointer char)).
+                              ]."
 
                "reset the pointer back to the root of the tree"
                pointer := dTree.
@@ -518,7 +518,7 @@ uopt ifTrue: [
 
                "code below is the same as the code above"
                pointer leaf ifTrue: [
-                  atend not ifTrue: [
+                  "atend not ifTrue: ["
                      pointer char = 256 ifTrue: [
                         dopt ifTrue: [
                            stdout << 'Finished uncompressing.' << nl.].
@@ -541,7 +541,7 @@ uopt ifTrue: [
                         "reset the pointer back to the root of the tree"
                         pointer := dTree.
                      ].
-                  ].
+                  "]."
                ].
             ].
          ].
@@ -676,6 +676,7 @@ uopt ifFalse: [
             outBytes writeBit: bit.].
 
          outBytes writeBit: 1.
+         outBytes flushByte.
 
          
          [inputfiler2 atEnd not] whileTrue: [
@@ -692,7 +693,8 @@ uopt ifFalse: [
             1 to: (eof size) by: 1 do: [:index |
                bit:= ((eof at: index) asInteger) - 48.
             outBytes writeBit: bit.]. 
-   
+
+         outBytes writeBit: 1.
          outBytes flushByte.
 
          dopt ifTrue: [
@@ -711,6 +713,7 @@ uopt ifFalse: [
          outBytes writeBit: bit.].
 
          outBytes writeBit: 1.
+         outBytes flushByte.
 
          
          [inputfiler2 atEnd not] whileTrue: [
@@ -728,6 +731,7 @@ uopt ifFalse: [
                bit:= ((eof at: index) asInteger) - 48.
             outBytes writeBit: bit.]. 
   
+         outBytes writeBit: 1.
          outBytes flushByte.
 
          Transcript cr.
