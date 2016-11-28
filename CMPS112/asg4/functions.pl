@@ -13,6 +13,14 @@ fly(From, To) :-
         get_departure_time(From, To, time(0, 0)).
 
 
+match_airport(From, To, Name1, Name2) :-
+        airport(From, Name1a, degmin(_, _), degmin(_, _)),
+        airport(To, Name2a, degmin(_, _), degmin(_, _)),
+        Name1 = Name1a,
+        Name2 = Name2a.
+
+
+
 
 % if the start destination is the same as the end, zero-fly.
 get_departure_time(X, X) :-
@@ -28,7 +36,20 @@ get_departure_time(X, Y, time(HourA, MinA)) :-
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
-        print(flight(X, Y, time(HourB, MinB))),
+        match_airport(X, Y, Name1, Name2),
+        print('depart '),
+        print(X),
+        print(' '),
+        print(Name1),
+        print(' '),
+        print(HourB),
+        print(':'),
+        print(MinB),
+        nl,
+        print('arrive '),
+        print(Y),
+        print(' '),
+        print(Name2),
         nl.
 
 
