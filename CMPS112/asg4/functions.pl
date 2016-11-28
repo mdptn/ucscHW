@@ -45,11 +45,14 @@ haversine_radians( Lat1, Lon1, Lat2, Lon2, Distance ) :-
 % calculates the arrival time with planes flying 500 mi/hr.
 % calculates duration in minutes and then adds & divides accordingly for arrival time
 calculate_arrival_time(DepHour, DepMin, Distance, ArrHour, ArrMin) :-
+
         % convert departure time into minutes
         DecimalMin is DepMin / 60,
         DepartMin is (DepHour + DecimalMin) * 60,
+
         % find duration of flight in minutes
         DurationMin is Distance / 500 * 60,
+
         % add duration of flight to the departure time
         ArrivalMin is DepartMin + DurationMin,
         RoundedMin is truncate(ArrivalMin),
@@ -75,28 +78,16 @@ get_departure_time(X, Y, time(HourA, MinA)) :-
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
+
+        % call other functions to calculate travel time
         match_airport(X, Y, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2),
         convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2),
         haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
         calculate_arrival_time(HourB, MinB, Distance, ArrHour, ArrMin),
-        print('depart '),
-        print(X),
-        print(' '),
-        print(Name1),
-        print(' '),
-        print(HourB),
-        print(':'),
-        print(MinB),
-        nl,
-        print('arrive '),
-        print(Y),
-        print(' '),
-        print(Name2),
-        print(' '),
-        print(ArrHour),
-        print(':'),
-        print(ArrMin),
-        nl.
+
+        % print output
+        format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
+        format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]).
 
 
 
