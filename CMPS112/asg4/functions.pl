@@ -9,8 +9,12 @@
 :- initialization(main).
 
 
-not( X ) :- X, !.
+
+not( X ) :- X, !, fail.
 not( _ ).
+
+
+% checks if an element is a member of a list. used to prevent backtracking
 
 
 % matches the airport abbreviation with the airport information
@@ -48,7 +52,7 @@ haversine_radians( Lat1, Lon1, Lat2, Lon2, Distance ) :-
 
 % calculates the arrival time with planes flying 500 mi/hr.
 % calculates duration in minutes and then adds & divides accordingly for arrival time
-calculate_arrival_time(DepHour, DepMin, Distance, RoundedMin) :-
+calculate_arrival_time(DepHour, DepMin, Distance, RoundedMin, ArrHour, ArrMin) :-
         % convert departure time into minutes
         DecimalMin is DepMin / 60,
         DepartMin is (DepHour + DecimalMin) * 60,
@@ -58,7 +62,9 @@ calculate_arrival_time(DepHour, DepMin, Distance, RoundedMin) :-
 
         % add duration of flight to the departure time
         ArrivalMin is DepartMin + DurationMin,
-        RoundedMin is truncate(ArrivalMin).
+        RoundedMin is truncate(ArrivalMin),
+        ArrHour is RoundedMin // 60,
+        ArrMin is mod(RoundedMin, 60).
 
 
 % if the start destination is the same as the end, zero-fly.
@@ -70,13 +76,14 @@ fly(X, X) :-
 
 fly(From, To) :-
         CFrom = From,
-        get_departure_time(From, To, time(0, 0), P, CFrom),
+        get_departure_time(From, To, time(0, 0), P, CFrom, Visited),
         print(P).
 
 
 % finds direct flights between locations
-get_departure_time(X, Y, time(HourA, MinA), [X,Y], CFrom) :-
+get_departure_time(X, Y, time(HourA, MinA), [X,Y], CFrom, Visited) :-
         flight(X, Y, time(HourB, MinB)),
+
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
@@ -85,9 +92,7 @@ get_departure_time(X, Y, time(HourA, MinA), [X,Y], CFrom) :-
         match_airport(X, Y, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2),
         convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2),
         haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
-        calculate_arrival_time(HourB, MinB, Distance, RoundedMin),
-        ArrHour is RoundedMin // 60,
-        ArrMin is mod(RoundedMin, 60),
+        calculate_arrival_time(HourB, MinB, Distance, RoundedMin, ArrHour, ArrMin),
 
         % print output
         format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
@@ -95,13 +100,14 @@ get_departure_time(X, Y, time(HourA, MinA), [X,Y], CFrom) :-
 
 
 % finds the transfer flights
-get_departure_time(X,Y, time(HourA, MinA), [X|Xs], CFrom) :-
+get_departure_time(X,Y, time(HourA, MinA), [X|Xs], CFrom, Visted) :-
         % make sure that there is no backtracking
         X \== Y,
 
         flight(X, W, time(HourB, MinB)),
-        W \== CFrom,
-        not(member(W, Xs)),
+        %not(W == CFrom),
+        %not(member(W, NewVisit)),
+
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
@@ -110,13 +116,12 @@ get_departure_time(X,Y, time(HourA, MinA), [X|Xs], CFrom) :-
         match_airport(X, W, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2),
         convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2),
         haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
-        calculate_arrival_time(HourB, MinB, Distance, RoundedMin),
-        ArrHour is RoundedMin // 60,
-        ArrMin is mod(RoundedMin, 60),
+        calculate_arrival_time(HourB, MinB, Distance, RoundedMin, ArrHour, ArrMin),
+
         DecimalArrival is ArrHour + (ArrMin / 60),
 
         % Cannot arrive past midnight
-        not(DecimalArrival > 24),
+        DecimalArrival =< 24,
 
         % flight transfers always take 30 minutes
         NewTime is RoundedMin + 30,
@@ -128,7 +133,7 @@ get_departure_time(X,Y, time(HourA, MinA), [X|Xs], CFrom) :-
         %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
         %format('arrive ~a ~a ~d:~d ~n', [W, Name2, ArrHour, ArrMin]),
 
-        get_departure_time(W, Y, time(NewHour, NewMin), Xs, CFrom).
+        get_departure_time(W, Y, time(NewHour, NewMin), Xs, CFrom, [X|Visited]).
 
 
 main :-
