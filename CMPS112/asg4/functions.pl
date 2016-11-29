@@ -9,36 +9,43 @@
 :- initialization(main).
 
 
-
 not( X ) :- X, !, fail.
 not( _ ).
 
 
-% checks if an element is a member of a list. used to prevent backtracking
+% checks if the airports entered are real and throws an errror if not
+fly(Isnt, Real) :-
+        not(match_airport(Isnt, Real, _, _, _)),
+        print('Error: One or more airports specified are non-existent.'),
+        nl,
+        halt.
+
+
+% if the start destination is the same as the end, zero-fly.
+fly(X, X) :-
+        print('Error: Zero-fly query - You are already at your destination.'),
+        nl,
+        halt.
+
+
+% valid airports, proceed.
+fly(From, To) :-
+        get_departure_time(From, To, time(0, 0), [From], List),
+        print(List),
+        print_flight_list(List).
 
 
 % matches the airport abbreviation with the airport information
-match_airport(From, To, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2) :-
-        airport(From, Name1a, degmin(LatD1a, LatM1a), degmin(LonD1a, LonM1a)),
-        airport(To, Name2a, degmin(LatD2a, LatM2a), degmin(LonD2a, LonM2a)),
-        Name1 = Name1a,
-        Name2 = Name2a,
-        LatD1 = LatD1a,
-        LatM1 = LatM1a,
-        LonD1 = LonD1a,
-        LonM1 = LonM1a,
-        LatD2 = LatD2a,
-        LatM2 = LatM2a,
-        LonD2 = LonD2a,
-        LonM2 = LonM2a.
-
-
-% converts degrees, min to radians. 1 min = 0.0166667 deg, 1 deg = 0.0174533 rad
-convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2) :-
+% gets distance between them too
+% deg,min to radians. 1 min = 0.0166667 deg, 1 deg = 0.0174533 rad
+match_airport(From, To, Name1, Name2, Distance) :-
+        airport(From, Name1, degmin(LatD1, LatM1), degmin(LonD1, LonM1)),
+        airport(To, Name2, degmin(LatD2, LatM2), degmin(LonD2, LonM2)),
         Lat1 is (LatD1 + (LatM1 * 0.0166667)) * 0.0174533,
         Lon1 is (LonD1 + (LonM1 * 0.0166667)) * 0.0174533,
         Lat2 is (LatD2 + (LatM2 * 0.0166667)) * 0.0174533,
-        Lon2 is (LonD2 + (LonM2 * 0.0166667)) * 0.0174533.
+        Lon2 is (LonD2 + (LonM2 * 0.0166667)) * 0.0174533,
+        haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance).
 
 
 % haversine function from functions.pl example, gets distance between airports in miles
@@ -67,74 +74,62 @@ calculate_arrival_time(DepHour, DepMin, Distance, RoundedMin, ArrHour, ArrMin) :
         ArrMin is mod(RoundedMin, 60).
 
 
-% if the start destination is the same as the end, zero-fly.
-fly(X, X) :-
-        print('Error: Zero-fly query - You are already at your destination.'),
-        nl,
-        halt.
-
-
-fly(From, To) :-
-        CFrom = From,
-        get_departure_time(From, To, time(0, 0), P, CFrom, Visited),
-        print(P).
-
-
-% finds direct flights between locations
-get_departure_time(X, Y, time(HourA, MinA), [X,Y], CFrom, Visited) :-
-        flight(X, Y, time(HourB, MinB)),
+get_departure_time(From, To, time(HourA, MinA), Visited, [Flight|List]) :-
+        flight(From, To, time(HourB, MinB)),
+        not(member(To, Visited)),
 
         A is HourA + MinA/60,
         B is HourB + MinB/60,
-        A < B,
+        % no flights depart past midnight and be at a possible time
+        A =< 24,
+        A =< B,
 
-        % call other functions to calculate travel time
-        match_airport(X, Y, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2),
-        convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2),
-        haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
+        match_airport(From, To, Name1, Name2, Distance),
         calculate_arrival_time(HourB, MinB, Distance, RoundedMin, ArrHour, ArrMin),
+        
+        % add info to flight list
+        Flight = [From, Name1, HourB, MinB, W, Name2, ArrHour, ArrMin].
 
-        % print output
-        format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
-        format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]).
 
-
-% finds the transfer flights
-get_departure_time(X,Y, time(HourA, MinA), [X|Xs], CFrom, Visted) :-
-        % make sure that there is no backtracking
-        X \== Y,
-
-        flight(X, W, time(HourB, MinB)),
-        %not(W == CFrom),
-        %not(member(W, NewVisit)),
+get_departure_time(From, To, time(HourA, MinA), Visited, [Flight|List]) :-
+        flight(From, W, time(HourB, MinB)),
+        % prevent backtracking
+        not(W == To),
+        not(member(W, Visited)),
 
         A is HourA + MinA/60,
         B is HourB + MinB/60,
-        A < B,
+        % no flights depart past midnight and be at a possible time
+        A =< 24,    
+        A =< B,
 
-        % call other functions to calculate travel time
-        match_airport(X, W, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2),
-        convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2),
-        haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
+        match_airport(From, W, Name1, Name2, Distance),
         calculate_arrival_time(HourB, MinB, Distance, RoundedMin, ArrHour, ArrMin),
-
-        DecimalArrival is ArrHour + (ArrMin / 60),
-
-        % Cannot arrive past midnight
-        DecimalArrival =< 24,
+        
+        % add info to flight list
+        Flight = [From, Name1, HourB, MinB, W, Name2, ArrHour, ArrMin],
 
         % flight transfers always take 30 minutes
         NewTime is RoundedMin + 30,
         NewHour is NewTime // 60,
         NewMin is mod(NewTime, 60),
 
+        get_departure_time(W, To, time(NewHour, NewMin), [W|Visited], List).
 
-        % print output
-        %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
+
+% prints the flight list in the desired format
+split_flight_list([H|T]) :-
+        print_flight_list(H).
+        %format('depart ~a ~n', [H]).
+        %format('depart ~a ~a ~d:~d ~n', [A,B,C,D]).
         %format('arrive ~a ~a ~d:~d ~n', [W, Name2, ArrHour, ArrMin]),
 
-        get_departure_time(W, Y, time(NewHour, NewMin), Xs, CFrom, [X|Visited]).
 
+% prints the flight list in the desired format
+print_flight_list([H|T]) :-
+        format('depart ~a ~n', [H]).
+        %format('depart ~a ~a ~d:~d ~n', [A,B,C,D]).
+        %format('arrive ~a ~a ~d:~d ~n', [W, Name2, ArrHour, ArrMin]),
 
 main :-
         [database].
