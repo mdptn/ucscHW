@@ -67,15 +67,13 @@ fly(X, X) :-
 
 
 fly(From, To) :-
-        get_departure_time(From, To, time(0, 0), P, [From|Visited]),
-        print(P),
-        print(Visited).
+        get_departure_time(From, To, time(0, 0), P),
+        print(P).
 
 
 % finds direct flights between locations
-get_departure_time(X, Y, time(HourA, MinA), [X,Y], Visited) :-
+get_departure_time(X, Y, time(HourA, MinA), [X,Y]) :-
         flight(X, Y, time(HourB, MinB)),
-        not(member(Y, Visited)),
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
@@ -90,16 +88,18 @@ get_departure_time(X, Y, time(HourA, MinA), [X,Y], Visited) :-
 
         % print output
         %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
-        %format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]).
+        %format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]),
 
+        %ThisFlight = [X, Name1, HourB, MinB, Y, Name2, ArrHour, ArrMin],
+        %append(FlightList,ThisFlight, NewFlightList),
+        %FlightList = NewFlightList.
 
 % finds the transfer flights
-get_departure_time(X,Y, time(HourA, MinA), [X|Xs], Visited) :-
+get_departure_time(X,Y, time(HourA, MinA), [X|Xs]) :-
         % make sure that there is no backtracking
         X \== Y,
 
         flight(X, W, time(HourB, MinB)),
-        not(member(W, Visited)),
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
@@ -126,7 +126,9 @@ get_departure_time(X,Y, time(HourA, MinA), [X|Xs], Visited) :-
         %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
         %format('arrive ~a ~a ~d:~d ~n', [W, Name2, ArrHour, ArrMin]),
 
-        get_departure_time(W, Y, time(NewHour, NewMin), Xs, [W|Visited]).
+        %ThisFlight = [X, Name1, HourB, MinB, W, Name2, ArrHour, ArrMin],
+
+        get_departure_time(W, Y, time(NewHour, NewMin), Xs).
 
 
 main :-
