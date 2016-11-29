@@ -8,8 +8,10 @@
 
 :- initialization(main).
 
+
 not( X ) :- X, !.
 not( _ ).
+
 
 % matches the airport abbreviation with the airport information
 match_airport(From, To, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2) :-
@@ -67,12 +69,13 @@ fly(X, X) :-
 
 
 fly(From, To) :-
-        get_departure_time(From, To, time(0, 0), P),
+        CFrom = From,
+        get_departure_time(From, To, time(0, 0), P, CFrom),
         print(P).
 
 
 % finds direct flights between locations
-get_departure_time(X, Y, time(HourA, MinA), [X,Y]) :-
+get_departure_time(X, Y, time(HourA, MinA), [X,Y], CFrom) :-
         flight(X, Y, time(HourB, MinB)),
         A is HourA + MinA/60,
         B is HourB + MinB/60,
@@ -90,16 +93,15 @@ get_departure_time(X, Y, time(HourA, MinA), [X,Y]) :-
         %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
         %format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]),
 
-        %ThisFlight = [X, Name1, HourB, MinB, Y, Name2, ArrHour, ArrMin],
-        %append(FlightList,ThisFlight, NewFlightList),
-        %FlightList = NewFlightList.
 
 % finds the transfer flights
-get_departure_time(X,Y, time(HourA, MinA), [X|Xs]) :-
+get_departure_time(X,Y, time(HourA, MinA), [X|Xs], CFrom) :-
         % make sure that there is no backtracking
         X \== Y,
 
         flight(X, W, time(HourB, MinB)),
+        W \== CFrom,
+        not(member(W, Xs)),
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
@@ -116,19 +118,17 @@ get_departure_time(X,Y, time(HourA, MinA), [X|Xs]) :-
         % Cannot arrive past midnight
         not(DecimalArrival > 24),
 
-
         % flight transfers always take 30 minutes
         NewTime is RoundedMin + 30,
         NewHour is NewTime // 60,
         NewMin is mod(NewTime, 60),
 
+
         % print output
         %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
         %format('arrive ~a ~a ~d:~d ~n', [W, Name2, ArrHour, ArrMin]),
 
-        %ThisFlight = [X, Name1, HourB, MinB, W, Name2, ArrHour, ArrMin],
-
-        get_departure_time(W, Y, time(NewHour, NewMin), Xs).
+        get_departure_time(W, Y, time(NewHour, NewMin), Xs, CFrom).
 
 
 main :-
