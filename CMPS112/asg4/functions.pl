@@ -87,11 +87,11 @@ get_departure_time(X, Y, time(HourA, MinA), [X,Y], CFrom) :-
         haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
         calculate_arrival_time(HourB, MinB, Distance, RoundedMin),
         ArrHour is RoundedMin // 60,
-        ArrMin is mod(RoundedMin, 60).
+        ArrMin is mod(RoundedMin, 60),
 
         % print output
-        %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
-        %format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]),
+        format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
+        format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]).
 
 
 % finds the transfer flights
