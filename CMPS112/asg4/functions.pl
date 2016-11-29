@@ -8,6 +8,8 @@
 
 :- initialization(main).
 
+not( X ) :- X, !.
+not( _ ).
 
 % matches the airport abbreviation with the airport information
 match_airport(From, To, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2) :-
@@ -44,8 +46,7 @@ haversine_radians( Lat1, Lon1, Lat2, Lon2, Distance ) :-
 
 % calculates the arrival time with planes flying 500 mi/hr.
 % calculates duration in minutes and then adds & divides accordingly for arrival time
-calculate_arrival_time(DepHour, DepMin, Distance, ArrHour, ArrMin) :-
-
+calculate_arrival_time(DepHour, DepMin, Distance, RoundedMin) :-
         % convert departure time into minutes
         DecimalMin is DepMin / 60,
         DepartMin is (DepHour + DecimalMin) * 60,
@@ -55,26 +56,26 @@ calculate_arrival_time(DepHour, DepMin, Distance, ArrHour, ArrMin) :-
 
         % add duration of flight to the departure time
         ArrivalMin is DepartMin + DurationMin,
-        RoundedMin is truncate(ArrivalMin),
-        ArrHour is RoundedMin // 60,
-        ArrMin is mod(RoundedMin, 60).
-
-
-fly(From, To) :-
-        get_departure_time(From, To, time(0, 0)).
+        RoundedMin is truncate(ArrivalMin).
 
 
 % if the start destination is the same as the end, zero-fly.
-get_departure_time(X, X) :-
+fly(X, X) :-
         print('Error: Zero-fly query - You are already at your destination.'),
         nl,
         halt.
 
 
+fly(From, To) :-
+        get_departure_time(From, To, time(0, 0), P, [From|Visited]),
+        print(P),
+        print(Visited).
+
 
 % finds direct flights between locations
-get_departure_time(X, Y, time(HourA, MinA)) :-
+get_departure_time(X, Y, time(HourA, MinA), [X,Y], Visited) :-
         flight(X, Y, time(HourB, MinB)),
+        not(member(Y, Visited)),
         A is HourA + MinA/60,
         B is HourB + MinB/60,
         A < B,
@@ -83,12 +84,49 @@ get_departure_time(X, Y, time(HourA, MinA)) :-
         match_airport(X, Y, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2),
         convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2),
         haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
-        calculate_arrival_time(HourB, MinB, Distance, ArrHour, ArrMin),
+        calculate_arrival_time(HourB, MinB, Distance, RoundedMin),
+        ArrHour is RoundedMin // 60,
+        ArrMin is mod(RoundedMin, 60).
 
         % print output
-        format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
-        format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]).
+        %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
+        %format('arrive ~a ~a ~d:~d ~n', [Y, Name2, ArrHour, ArrMin]).
 
+
+% finds the transfer flights
+get_departure_time(X,Y, time(HourA, MinA), [X|Xs], Visited) :-
+        % make sure that there is no backtracking
+        X \== Y,
+
+        flight(X, W, time(HourB, MinB)),
+        not(member(W, Visited)),
+        A is HourA + MinA/60,
+        B is HourB + MinB/60,
+        A < B,
+
+        % call other functions to calculate travel time
+        match_airport(X, W, Name1, Name2, LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2),
+        convert_to_radians(LatD1, LatM1, LonD1, LonM1, LatD2, LatM2, LonD2, LonM2, Lat1, Lon1, Lat2, Lon2),
+        haversine_radians(Lat1, Lon1, Lat2, Lon2, Distance),
+        calculate_arrival_time(HourB, MinB, Distance, RoundedMin),
+        ArrHour is RoundedMin // 60,
+        ArrMin is mod(RoundedMin, 60),
+        DecimalArrival is ArrHour + (ArrMin / 60),
+
+        % Cannot arrive past midnight
+        not(DecimalArrival > 24),
+
+
+        % flight transfers always take 30 minutes
+        NewTime is RoundedMin + 30,
+        NewHour is NewTime // 60,
+        NewMin is mod(NewTime, 60),
+
+        % print output
+        %format('depart ~a ~a ~d:~d ~n', [X, Name1, HourB, MinB]),
+        %format('arrive ~a ~a ~d:~d ~n', [W, Name2, ArrHour, ArrMin]),
+
+        get_departure_time(W, Y, time(NewHour, NewMin), Xs, [W|Visited]).
 
 
 main :-
