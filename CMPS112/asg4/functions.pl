@@ -30,10 +30,7 @@ fly(X, X) :-
 
 % valid airports, proceed.
 fly(From, To) :-
-        get_departure_time(From, To, time(0, 0), [From], List).
-        %print_flights(List),
-        %write(List).
-        %split_flight_list(List).
+        get_departure_time(From, To, time(0, 0), [From], []).
 
 
 % matches the airport abbreviation with the airport information
@@ -86,19 +83,13 @@ get_departure_time(From, To, time(HourA, MinA), Visited, List) :-
         A =< B,
 
         match_airport(From, To, Name1, Name2, Distance),
-        calculate_arrival_time(HourB, MinB, Distance, RoundedMin, ArrHour, ArrMin),
-
-        %format('depart ~a ~a ~d:~d ~n', [From, Name1, HourB, MinB]),
-        %format('arrive ~a ~a ~d:~d ~n', [To, Name2, ArrHour, ArrMin]),        
-
+        calculate_arrival_time(HourB, MinB, Distance, RoundedMin, ArrHour, ArrMin),      
 
         % add info to flight list
         Flight = [From, Name1, HourB, MinB, To, Name2, ArrHour, ArrMin],
-        
         NewList = [Flight|List],
-        write(NewList).
-
-        %print_flights(List).
+        reverse(NewList, FinalList, []),
+        print_flights(FinalList).
 
 
 get_departure_time(From, To, time(HourA, MinA), Visited, List) :-
@@ -118,7 +109,6 @@ get_departure_time(From, To, time(HourA, MinA), Visited, List) :-
         
         % add info to flight list
         Flight = [From, Name1, HourB, MinB, W, Name2, ArrHour, ArrMin],
-
         NewList = [Flight|List],
 
         % flight transfers always take 30 minutes
@@ -129,11 +119,14 @@ get_departure_time(From, To, time(HourA, MinA), Visited, List) :-
         get_departure_time(W, To, time(NewHour, NewMin), [W|Visited], NewList).
 
 
+% reverse a list
+ reverse([],Z,Z).
+ reverse([H|T], Z, Acc) :- reverse(T, Z, [H|Acc]).
+
+
 % prints the flight list in the desired format
 print_flights([]) :- nl.
 print_flights([[From, Name1, DepHour, DepMin, To, Name2, ArrHour, ArrMin]|Tail]) :-
-        write(Tail),
-        nl,
         format('depart ~a ~a ~d:~d ~n', [From, Name1, DepHour, DepMin]),
         format('arrive ~a ~a ~d:~d ~n', [To, Name2, ArrHour, ArrMin]),
         print_flights(Tail).
