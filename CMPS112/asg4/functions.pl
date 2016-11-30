@@ -30,9 +30,9 @@ fly(X, X) :-
 
 % valid airports, proceed.
 fly(From, To) :-
-        get_departure_time(From, To, time(0, 0), [From], List),
+        get_departure_time(From, To, time(0, 0), [From], List).
         %print_flights(List),
-        write(List).
+        %write(List).
         %split_flight_list(List).
 
 
@@ -75,7 +75,7 @@ calculate_arrival_time(DepHour, DepMin, Distance, RoundedMin, ArrHour, ArrMin) :
         ArrMin is mod(RoundedMin, 60).
 
 
-get_departure_time(From, To, time(HourA, MinA), Visited, [Flight|List]) :-
+get_departure_time(From, To, time(HourA, MinA), Visited, List) :-
         flight(From, To, time(HourB, MinB)),
         not(member(To, Visited)),
 
@@ -91,29 +91,17 @@ get_departure_time(From, To, time(HourA, MinA), Visited, [Flight|List]) :-
         %format('depart ~a ~a ~d:~d ~n', [From, Name1, HourB, MinB]),
         %format('arrive ~a ~a ~d:~d ~n', [To, Name2, ArrHour, ArrMin]),        
 
-        atom_concat('depart ', From, String1),
-        atom_concat(' ', Name1, String2),
-        %atom_concat(' ', NewHB, String3),
-        %atom_concat(':', MinB, String4),
-        atom_concat(String1, String2, String5),
-        %atom_concat(String5, String3, String6),
-        %atom_concat(String6, String4, DString),
-
-        atom_concat('arrive ', To, String7),
-        atom_concat(' ', Name2, String8),
-        %atom_concat(' ', ArrHour, String9),
-        %atom_concat(':', ArrMin, String10),
-        atom_concat(String7, String8, String11),
-        %atom_concat(String11, String9, String12),
-        %atom_concat(String12, String10, AString),
 
         % add info to flight list
-        %Flight = [From, Name1, HourB, MinB, To, Name2, ArrHour, ArrMin]
-        %Flight = [DString, AString].
-        Flight = [String5, String11].
+        Flight = [From, Name1, HourB, MinB, To, Name2, ArrHour, ArrMin],
+        
+        NewList = [Flight|List],
+        write(NewList).
+
+        %print_flights(List).
 
 
-get_departure_time(From, To, time(HourA, MinA), Visited, [Flight|List]) :-
+get_departure_time(From, To, time(HourA, MinA), Visited, List) :-
         flight(From, W, time(HourB, MinB)),
         % prevent backtracking
         not(W == To),
@@ -127,50 +115,28 @@ get_departure_time(From, To, time(HourA, MinA), Visited, [Flight|List]) :-
 
         match_airport(From, W, Name1, Name2, Distance),
         calculate_arrival_time(HourB, MinB, Distance, RoundedMin, ArrHour, ArrMin),
-
-        atom_concat('depart ', From, String1),
-        atom_concat(' ', Name1, String2),
-        %atom_concat(' ', NewHB, String3),
-        %atom_concat(':', MinB, String4),
-        atom_concat(String1, String2, String5),
-        %atom_concat(String5, String3, String6),
-        %atom_concat(String6, String4, DString),
-
-        atom_concat('arrive ', W, String7),
-        atom_concat(' ', Name2, String8),
-        %atom_concat(' ', ArrHour, String9),
-        %atom_concat(':', ArrMin, String10),
-        atom_concat(String7, String8, String11),
-        %atom_concat(String11, String9, String12),
-        %atom_concat(String12, String10, AString),
         
         % add info to flight list
-        %Flight = [From, Name1, HourB, MinB, W, Name2, ArrHour, ArrMin],
-        Flight = [String5, String11],
+        Flight = [From, Name1, HourB, MinB, W, Name2, ArrHour, ArrMin],
+
+        NewList = [Flight|List],
 
         % flight transfers always take 30 minutes
         NewTime is RoundedMin + 30,
         NewHour is NewTime // 60,
         NewMin is mod(NewTime, 60),
 
-        get_departure_time(W, To, time(NewHour, NewMin), [W|Visited], List).
-
-
-% recursive function that splits the head of the list and calls to print it
-split_flight_list([]).
-split_flight_list([H|T]) :-
-        print_flight_list(H),
-        nl,
-        split_flight_list(T).
-
+        get_departure_time(W, To, time(NewHour, NewMin), [W|Visited], NewList).
 
 
 % prints the flight list in the desired format
-print_flight_list([]).
-print_flight_list(List) :-
-        write(List).
-        %format('depart ~a ~a ~d:~d ~n', [A,B,C,D]).
-        %format('arrive ~a ~a ~d:~d ~n', [W, Name2, ArrHour, ArrMin]),
+print_flights([]) :- nl.
+print_flights([[From, Name1, DepHour, DepMin, To, Name2, ArrHour, ArrMin]|Tail]) :-
+        write(Tail),
+        nl,
+        format('depart ~a ~a ~d:~d ~n', [From, Name1, DepHour, DepMin]),
+        format('arrive ~a ~a ~d:~d ~n', [To, Name2, ArrHour, ArrMin]),
+        print_flights(Tail).
 
 main :-
         [database].
