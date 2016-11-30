@@ -123,12 +123,25 @@ get_departure_time(From, To, time(HourA, MinA), Visited, List) :-
  reverse([],Z,Z).
  reverse([H|T], Z, Acc) :- reverse(T, Z, [H|Acc]).
 
+% add an extra zero to minutes if minutes is less than 10
+extra_zero(X) :-
+        X < 10,
+        print(0),
+        print(X),
+        nl.
+extra_zero(X) :-
+        X >= 10,
+        print(X),
+        nl.
+
 
 % prints the flight list in the desired format
 print_flights([]) :- nl.
 print_flights([[From, Name1, DepHour, DepMin, To, Name2, ArrHour, ArrMin]|Tail]) :-
-        format('depart ~a ~a ~d:~d ~n', [From, Name1, DepHour, DepMin]),
-        format('arrive ~a ~a ~d:~d ~n', [To, Name2, ArrHour, ArrMin]),
+        format('depart ~a ~a ~d:', [From, Name1, DepHour]),
+        extra_zero(DepMin),
+        format('arrive ~a ~a ~d:', [To, Name2, ArrHour]),
+        extra_zero(ArrMin),
         print_flights(Tail).
 
 main :-
