@@ -1,2 +1,4 @@
 # ucscHW
-programming assignments for school. bit late to start since it's my last quarter here, so I'm only using it for CS112. heh
+programming assignments for school. there's only cs112 on here since i started this repo my last quarter (lol)
+
+will upload past schoolwork, eventually..
